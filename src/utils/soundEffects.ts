@@ -1,3 +1,7 @@
+/**
+ * Sound effects loaded from /public/sounds/*.mp3 (drop your own files there).
+ * Falls back to a short synthesized tone if a file is missing or blocked.
+ */
 let ctx: AudioContext | null = null;
 function ac() {
   if (typeof window === "undefined") return null;
@@ -23,16 +27,34 @@ function tone(freq: number, start: number, dur: number, type: OscillatorType, ga
   o.stop(t + dur + 0.05);
 }
 
-/** Bright rising two-tone "ding-dong". */
-export function playCorrectSound() {
-  tone(880, 0, 0.35, "sine", 0.35);
-  tone(1318.5, 0.18, 0.6, "sine", 0.35);
+const missing = new Set<string>();
+
+function playFile(src: string, fallback: () => void) {
+  if (typeof window === "undefined") return;
+  if (missing.has(src)) return fallback();
+  const a = new Audio(src);
+  let fellBack = false;
+  const fb = () => { if (!fellBack) { fellBack = true; missing.add(src); fallback(); } };
+  a.addEventListener("error", fb, { once: true });
+  a.play().catch((e: unknown) => {
+    // NotAllowedError = autoplay blocked; don't mark file as missing
+    if (e instanceof DOMException && e.name === "NotAllowedError") return;
+    fb();
+  });
 }
 
-/** Low, dull quiz buzzer "mööp". */
+export function playCorrectSound() {
+  playFile("/sounds/correct.mp3", () => {
+    tone(880, 0, 0.35, "sine", 0.35);
+    tone(1318.5, 0.18, 0.6, "sine", 0.35);
+  });
+}
+
 export function playWrongSound() {
-  tone(150, 0, 0.7, "sawtooth", 0.25, 110);
-  tone(155, 0, 0.7, "square", 0.12, 112);
+  playFile("/sounds/wrong.mp3", () => {
+    tone(150, 0, 0.7, "sawtooth", 0.25, 110);
+    tone(155, 0, 0.7, "square", 0.12, 112);
+  });
 }
 
 /** Soft tick for the last seconds of a countdown. */

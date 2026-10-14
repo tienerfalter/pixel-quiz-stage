@@ -4,6 +4,7 @@ import { StageQuestion } from "@/components/quiz/StageQuestion";
 import { StageTimer } from "@/components/quiz/TimerDisplay";
 import { playCorrectSound, playWrongSound } from "@/utils/soundEffects";
 import { useQuiz } from "@/context/QuizContext";
+import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";
 
 export const Route = createFileRoute("/display")({
   head: () => ({
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/display")({
 });
 
 function DisplayPage() {
-  const { quiz, currentQuestionIndex, teams, sfx } = useQuiz();
+  const { quiz, currentQuestionIndex, teams, sfx, nextQuestion } = useQuiz();
   useEffect(() => {
     if (sfx.seq === 0) return;
     if (sfx.kind === "correct") playCorrectSound();
@@ -49,7 +50,7 @@ function DisplayPage() {
               Frage {currentQuestionIndex + 1} · {question.title}
             </p>
             <h1 className="mt-6 max-w-6xl text-6xl font-extrabold leading-tight">{question.question}</h1>
-            <StageQuestion key={question.id} question={question} />
+            <QuestionErrorBoundary resetKey={question.id} onSkip={nextQuestion}><StageQuestion key={question.id} question={question} /></QuestionErrorBoundary>
           </>
         )}
       </div>

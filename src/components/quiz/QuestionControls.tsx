@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Pause, Play, RotateCcw, Volume2 } from "lucide-react";
-import { useQuiz } from "@/context/QuizContext";
+import { useQuiz, useTimerSeconds } from "@/context/QuizContext";
 import type { QuizQuestion } from "@/types/quiz";
 
 const btn = "rounded-lg bg-secondary px-4 py-2 font-semibold hover:bg-muted disabled:opacity-40";
@@ -10,7 +10,20 @@ export function QuestionControls({ question }: { question: QuizQuestion }) {
   const q = useQuiz();
 
   const isMosaic = question.type === "mosaic";
-  const tiles = isMosaic ? question.grid.rows * question.grid.cols : 0;
+  const tiles = isMosaic ? (question.grid?.rows || 4) * (question.grid?.cols || 4) : 0;
+  const secs = useTimerSeconds(q.timer);
+  const isLadder = question.type === "clue_ladder";
+  const clueCount = isLadder ? (question.clues?.length ?? 0) : 0;
+  const totalSec = question.timing?.hasTimer ? question.timing.timeLimitSeconds || 0 : 0;
+
+  // Clue ladder with timer: split time evenly across clues, auto-reveal on schedule.
+  useEffect(() => {
+    if (!isLadder || !totalSec || !clueCount || !q.timer.enabled || q.phase !== "guessing") return;
+    const elapsed = totalSec - secs;
+    const target = Math.min(clueCount, 1 + Math.floor(elapsed / (totalSec / clueCount)));
+    if (target > q.revealedClues) q.revealNextClue(clueCount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secs, isLadder, totalSec, clueCount, q.revealedClues, q.phase]);
   const interval = isMosaic ? (question.intervalSeconds ?? 3) : 0;
 
   // Auto-reveal timer runs in the admin tab only (single source of truth).
