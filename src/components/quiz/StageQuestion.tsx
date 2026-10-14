@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ImageIcon, Lock, Volume2 } from "lucide-react";
+import { Lock, Volume2 } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
 import type { QuizQuestion } from "@/types/quiz";
 

@@ -56,9 +56,14 @@ function DisplayPage() {
             )}
           </div>
         ) : !quiz || !question ? (
-          <div className="relative z-30">
-            <h1 className="text-7xl font-extrabold">{quiz?.meta.title ?? "Die Quiz-Show"}</h1>
-            <p className="mt-6 text-2xl uppercase tracking-[0.4em] text-primary">Willkommen zum Quiz</p>
+          <div className="relative z-30 flex max-h-full flex-col items-center">
+            {quiz?.intro?.image && (
+              <img src={quiz.intro.image} alt="" className="mb-8 max-h-[45vh] w-auto max-w-4xl rounded-2xl object-contain shadow-glow" />
+            )}
+            <h1 className="text-7xl font-extrabold">{quiz?.intro?.title || quiz?.meta.title || "Die Quiz-Show"}</h1>
+            <p className="mt-6 text-2xl uppercase tracking-[0.4em] text-primary">
+              {quiz?.intro?.subtitle || "Willkommen zum Quiz"}
+            </p>
           </div>
         ) : (
           <>
