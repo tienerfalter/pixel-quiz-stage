@@ -106,7 +106,8 @@ export interface LoadedQuizPackage extends QuizPackage {
   sourceFileName: string;
 }
 
-export type RoundStatus = "idle" | "running" | "locked" | "resolved";
+export type RoundStatus = "guessing" | "locked" | "resolved";
+export type Phase = RoundStatus;
 
 export interface Team {
   id: string;
