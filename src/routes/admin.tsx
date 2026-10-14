@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Plus, Trash2, Upload, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { hostStatus, kickTeam, openRoom, pushRoom, renameRoomTeam, unlockHost } from "@/lib/room.functions";
+import { publishQuizAssets } from "@/utils/roomAssets";
+import { Check, ChevronLeft, ChevronRight, KeyRound, Plus, Trash2, Upload, X } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
 import { QuestionControls } from "@/components/quiz/QuestionControls";
 import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";
@@ -177,6 +180,8 @@ function AdminControl() {
           {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
         </div>
 
+        <RoomPanel />
+
         {q.quiz && q.status === "intro" && (
           <section className="space-y-4 rounded-2xl border-2 border-primary/40 bg-card p-8 text-center">
             <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Bereit · {total} Fragen</p>
@@ -269,16 +274,17 @@ function AdminControl() {
           <div className="space-y-2">
             {q.teams.map((t) => (
               <div key={t.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-secondary px-3 py-2">
-                <input value={t.name} onChange={(e) => q.renameTeam(t.id, e.target.value)} aria-label="Teamname" className="min-w-0 flex-1 rounded-md bg-background px-2 py-1 font-semibold" />
+                <input value={t.name} onChange={(e) => q.renameTeam(t.id, e.target.value)} onBlur={(e) => q.room && e.target.value.trim() && rename({ data: { code: q.room.code, id: t.id, name: e.target.value.trim() } })} aria-label="Teamname" className="min-w-0 flex-1 rounded-md bg-background px-2 py-1 font-semibold" />
                 <span className="w-12 text-center font-mono text-lg">{t.score}</span>
                 {[-1, 1, 2, 5].map((d) => (
                   <button key={d} onClick={() => q.adjustScore(t.id, d)} className={`h-8 w-10 rounded-md text-sm font-bold ${d < 0 ? "bg-muted" : "bg-primary text-primary-foreground"}`}>{d > 0 ? `+${d}` : d}</button>
                 ))}
-                <button onClick={() => q.removeTeam(t.id)} aria-label="Team löschen" className="rounded-md p-2 text-destructive hover:bg-muted"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => { q.removeTeam(t.id); if (q.room) kick({ data: { code: q.room.code, id: t.id } }); }} aria-label="Team entfernen" className="rounded-md p-2 text-destructive hover:bg-muted"><Trash2 className="h-4 w-4" /></button>
               </div>
             ))}
           </div>
-          <button onClick={() => q.addTeam(`Team ${q.teams.length + 1}`)} className="mt-3 flex items-center gap-1 rounded-lg bg-secondary px-4 py-2 font-semibold hover:bg-muted"><Plus className="h-4 w-4" /> Neues Team</button>
+          {q.room && q.teams.length === 0 && <p className="text-sm text-muted-foreground">Noch keine Teams beigetreten – die Teams erscheinen hier live.</p>}
+          {!q.room && <button onClick={() => q.addTeam(`Team ${q.teams.length + 1}`)} className="mt-3 flex items-center gap-1 rounded-lg bg-secondary px-4 py-2 font-semibold hover:bg-muted"><Plus className="h-4 w-4" /> Neues Team</button>}
         </section>
       </div>
     </main>
