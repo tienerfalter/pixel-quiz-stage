@@ -48,6 +48,8 @@ interface SyncState {
   buzzerLocked: string[];
   /** Incremented to clear the cloud buzzer winner */
   buzzerResetSeq: number;
+  /** Book points automatically on correct/wrong and on resolve */
+  autoScoring: boolean;
 }
 
 interface QuizContextValue extends SyncState {
@@ -77,6 +79,7 @@ interface QuizContextValue extends SyncState {
   playSfx: (kind: SfxEvent["kind"]) => void;
   /** Lock a team out after a wrong buzzer answer and free the buzzer for others */
   lockOutBuzzer: (teamId: string) => void;
+  setAutoScoring: (on: boolean) => void;
   room: RoomLink | null;
   setRoom: (r: RoomLink | null) => void;
   buzzerWinner: string | null;
@@ -105,6 +108,8 @@ const FALLBACK_CONTEXT: QuizContextValue = {
   sfx: { kind: "correct", seq: 0 },
   buzzerLocked: [],
   buzzerResetSeq: 0,
+  autoScoring: true,
+  setAutoScoring: noop,
   lockOutBuzzer: noop,
   setQuiz: noop,
   goToQuestion: noop,
@@ -178,6 +183,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     teams: DEFAULT_TEAMS,
     sfx: { kind: "correct", seq: 0 },
     buzzerResetSeq: 0,
+    autoScoring: true,
     ...freshQuestionState({ playing: false, volume: 0.8, restartSeq: 0 }),
   });
   // Viewer-Rolle sofort aus der URL erkennen, damit der Beamer-Tab nie seinen
@@ -387,6 +393,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
             : { ...s.timer, remainingMs: s.timer.remainingMs + add },
         };
       }),
+    setAutoScoring: (autoScoring) => setState((s) => ({ ...s, autoScoring })),
     playSfx: (kind) => setState((s) => ({ ...s, sfx: { kind, seq: s.sfx.seq + 1 } })),
     lockOutBuzzer: (teamId) =>
       setState((s) => {
