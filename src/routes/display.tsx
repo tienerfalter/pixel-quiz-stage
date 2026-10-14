@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { StageQuestion } from "@/components/quiz/StageQuestion";
+import { StageTimer } from "@/components/quiz/TimerDisplay";
+import { playCorrectSound, playWrongSound } from "@/utils/soundEffects";
 import { useQuiz } from "@/context/QuizContext";
 
 export const Route = createFileRoute("/display")({
@@ -15,7 +18,12 @@ export const Route = createFileRoute("/display")({
 });
 
 function DisplayPage() {
-  const { quiz, currentQuestionIndex, teams } = useQuiz();
+  const { quiz, currentQuestionIndex, teams, sfx } = useQuiz();
+  useEffect(() => {
+    if (sfx.seq === 0) return;
+    if (sfx.kind === "correct") playCorrectSound();
+    else playWrongSound();
+  }, [sfx.seq, sfx.kind]);
   const question = quiz?.questions[currentQuestionIndex];
   const bg = quiz?.branding?.backgroundImage;
 
@@ -24,6 +32,7 @@ function DisplayPage() {
       className="bg-stage relative flex h-screen w-screen flex-col overflow-hidden bg-cover bg-center"
       style={bg ? { backgroundImage: `url(${bg})` } : undefined}
     >
+      {question && <StageTimer />}
       {quiz?.branding?.cornerLogo && (
         <img src={quiz.branding.cornerLogo} alt="Logo" className="absolute right-8 top-8 h-20 w-auto object-contain" />
       )}

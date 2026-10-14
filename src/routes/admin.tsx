@@ -3,6 +3,9 @@ import { useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Upload, X } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
 import { QuestionControls } from "@/components/quiz/QuestionControls";
+import { AdminTimer } from "@/components/quiz/TimerDisplay";
+
+const PHASE_LABEL = { guessing: "Raten", locked: "Gesperrt", resolved: "Aufgelöst" } as const;
 import { loadQuizPackage } from "@/utils/quizPackageLoader";
 
 export const Route = createFileRoute("/admin")({
@@ -56,7 +59,7 @@ function AdminPage() {
         <header className="flex items-center justify-between">
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">← Start</Link>
           <h1 className="text-2xl font-bold">Quizmaster Control</h1>
-          <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase">{q.roundStatus}</span>
+          <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase">{PHASE_LABEL[q.phase]}</span>
         </header>
 
         <div
@@ -100,12 +103,27 @@ function AdminPage() {
                 </div>
               )}
               <QuestionControls key={question.id} question={question} />
-              <div className="mt-6 flex flex-wrap gap-3">
-                <button onClick={() => q.setRoundStatus("running")} className="rounded-lg bg-secondary px-4 py-2 font-semibold">▶ Starten</button>
-                <button onClick={() => q.setRoundStatus("locked")} className="rounded-lg bg-secondary px-4 py-2 font-semibold">⏸ Sperren</button>
-                <button onClick={() => q.setRoundStatus("resolved")} className="flex items-center gap-1 rounded-lg bg-success px-4 py-2 font-semibold text-success-foreground"><Check className="h-4 w-4" /> Richtig</button>
-                <button onClick={() => q.setRoundStatus("locked")} className="flex items-center gap-1 rounded-lg bg-destructive px-4 py-2 font-semibold text-destructive-foreground"><X className="h-4 w-4" /> Falsch</button>
+            </section>
+
+            <section className="space-y-4 rounded-2xl border-2 border-primary/40 bg-card p-5">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <AdminTimer />
+                <div className="flex gap-3">
+                  <button onClick={() => q.playSfx("correct")} className="flex items-center gap-1 rounded-lg bg-success px-5 py-3 text-lg font-bold text-success-foreground"><Check className="h-5 w-5" /> Richtig</button>
+                  <button onClick={() => q.playSfx("wrong")} className="flex items-center gap-1 rounded-lg bg-destructive px-5 py-3 text-lg font-bold text-destructive-foreground"><X className="h-5 w-5" /> Falsch</button>
+                </div>
               </div>
+              {q.phase === "guessing" && (
+                <button onClick={() => q.setPhase("locked")} className="w-full rounded-xl bg-secondary py-4 text-lg font-bold hover:bg-muted">⏸ Eingaben sperren</button>
+              )}
+              {q.phase === "locked" && (
+                <button onClick={() => q.setPhase("resolved")} className="shadow-glow w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">Lösung auf Beamer enthüllen ▶</button>
+              )}
+              {q.phase === "resolved" && (
+                <button onClick={q.nextQuestion} disabled={q.currentQuestionIndex >= total - 1} className="w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground disabled:opacity-40">
+                  {q.currentQuestionIndex >= total - 1 ? "Letzte Frage erreicht" : "Nächste Frage ▶"}
+                </button>
+              )}
             </section>
           </>
         )}
