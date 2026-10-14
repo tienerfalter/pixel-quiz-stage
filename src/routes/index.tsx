@@ -8,6 +8,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Interaktive Quiz-Plattform mit Quizmaster, Bühnenanzeige und Spieler-Pad." },
       { property: "og:title", content: "Quiz Show – Startseite" },
       { property: "og:description", content: "Interaktive Quiz-Plattform mit Quizmaster, Bühnenanzeige und Spieler-Pad." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Index,

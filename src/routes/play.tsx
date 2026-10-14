@@ -9,6 +9,8 @@ export const Route = createFileRoute("/play")({
       { name: "description", content: "Raumcode eingeben, Team wählen und mitspielen." },
       { property: "og:title", content: "Mitspielen – Quiz Show" },
       { property: "og:description", content: "Raumcode eingeben, Team wählen und mitspielen." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: PlayPage,

@@ -140,7 +140,7 @@ function ClueLadder({ question }: { question: Extract<QuizQuestion, { type: "clu
   const pts = ppl[Math.min(revealedClues, ppl.length) - 1] ?? question.points;
   return (
     <div className={`w-full max-w-5xl ${phase === "resolved" ? "mt-4" : "mt-8"}`}>
-      {phase === "resolved" ? <div className="mb-3"><SolutionBanner notes={{ solution: question.hostNotes?.solution }} /></div>
+      {phase === "resolved" ? <div className="mb-3"><SolutionBanner notes={{ solution: question.hostNotes?.solution ?? "" }} /></div>
         : <p className="mb-6 text-3xl font-bold">Aktuelle Stufe: <span className="text-primary">{pts} Punkte</span></p>}
       <div className={phase === "resolved" ? "space-y-2" : "space-y-3"}>
         {clues.map((c, i) => {
@@ -220,7 +220,7 @@ function GridCoords({ question }: { question: Extract<QuizQuestion, { type: "gri
         </div>
       </div>
     </div>
-    {resolved && <SolutionBanner notes={{ solution: question.hostNotes?.solution }} />}
+    {resolved && <SolutionBanner notes={{ solution: question.hostNotes?.solution ?? "" }} />}
     </div>
   );
 }
