@@ -44,6 +44,10 @@ interface SyncState {
   audio: AudioState;
   timer: TimerState;
   sfx: SfxEvent;
+  /** Teams locked out of the buzzer for the current question */
+  buzzerLocked: string[];
+  /** Incremented to clear the cloud buzzer winner */
+  buzzerResetSeq: number;
 }
 
 interface QuizContextValue extends SyncState {
@@ -71,6 +75,8 @@ interface QuizContextValue extends SyncState {
   resetTimer: () => void;
   addTime: (seconds: number) => void;
   playSfx: (kind: SfxEvent["kind"]) => void;
+  /** Lock a team out after a wrong buzzer answer and free the buzzer for others */
+  lockOutBuzzer: (teamId: string) => void;
   room: RoomLink | null;
   setRoom: (r: RoomLink | null) => void;
   buzzerWinner: string | null;
@@ -97,6 +103,9 @@ const FALLBACK_CONTEXT: QuizContextValue = {
   audio: { playing: false, volume: 0.8, restartSeq: 0 },
   timer: { enabled: false, running: false, endsAt: null, remainingMs: 0 },
   sfx: { kind: "correct", seq: 0 },
+  buzzerLocked: [],
+  buzzerResetSeq: 0,
+  lockOutBuzzer: noop,
   setQuiz: noop,
   goToQuestion: noop,
   nextQuestion: noop,
@@ -147,6 +156,7 @@ const freshQuestionState = (audio: AudioState, question?: QuizQuestion) => ({
   mosaicAuto: false,
   audio: { ...audio, playing: false },
   timer: initialTimer(question),
+  buzzerLocked: [] as string[],
 });
 
 export function timerRemainingMs(t: TimerState, now = Date.now()) {
@@ -166,6 +176,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     showScores: false,
     teams: DEFAULT_TEAMS,
     sfx: { kind: "correct", seq: 0 },
+    buzzerResetSeq: 0,
     ...freshQuestionState({ playing: false, volume: 0.8, restartSeq: 0 }),
   });
   const [room, setRoom] = useState<RoomLink | null>(null);
@@ -240,13 +251,15 @@ export function QuizProvider({ children }: { children: ReactNode }) {
 
   // Host pushes state to the cloud room (debounced)
   const lastKey = useRef("");
+  const lastSeq = useRef(0);
   useEffect(() => {
     if (room?.role !== "host") return;
     const id = setTimeout(() => {
       const s = stateRef.current;
       const key = `${s.status}-${s.currentQuestionIndex}`;
-      const resetBuzzer = key !== lastKey.current;
+      const resetBuzzer = key !== lastKey.current || s.buzzerResetSeq !== lastSeq.current;
       lastKey.current = key;
+      lastSeq.current = s.buzzerResetSeq;
       pushRoom({
         data: {
           code: room.code,
@@ -356,6 +369,15 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         };
       }),
     playSfx: (kind) => setState((s) => ({ ...s, sfx: { kind, seq: s.sfx.seq + 1 } })),
+    lockOutBuzzer: (teamId) =>
+      setState((s) => {
+        const buzzerLocked = s.buzzerLocked.includes(teamId) ? s.buzzerLocked : [...s.buzzerLocked, teamId];
+        const left = s.teams.some((t) => !buzzerLocked.includes(t.id));
+        const timer = !left && s.timer.running
+          ? { ...s.timer, running: false, remainingMs: timerRemainingMs(s.timer), endsAt: null }
+          : s.timer;
+        return { ...s, buzzerLocked, buzzerResetSeq: s.buzzerResetSeq + 1, phase: left ? s.phase : "locked", timer };
+      }),
   };
 
   return <QuizContext.Provider value={value}>{children}</QuizContext.Provider>;

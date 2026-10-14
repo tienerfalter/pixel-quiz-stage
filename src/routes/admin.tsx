@@ -140,6 +140,13 @@ function AnswerCount({ code }: { code: string }) {
   const question = q.quiz?.questions[idx];
   const [count, setCount] = useState(0);
   const relevant = !!question && q.status === "running" && needsInput(question);
+  const autoLock = !!question && ["choice", "slider", "grid_coords"].includes(question.type);
+  const total = q.teams.length;
+  const allIn = total > 0 && count >= total;
+  const { phase, setPhase } = q;
+  useEffect(() => {
+    if (relevant && autoLock && allIn && phase === "guessing") setPhase("locked");
+  }, [relevant, autoLock, allIn, phase, setPhase]);
   useEffect(() => {
     if (!relevant) return;
     const load = () => supabase.from("room_answers").select("team_id", { count: "exact", head: true })
@@ -151,10 +158,9 @@ function AnswerCount({ code }: { code: string }) {
     return () => { supabase.removeChannel(ch); };
   }, [code, idx, relevant]);
   if (!relevant) return null;
-  const total = q.teams.length;
   return (
     <div className={`rounded-xl px-4 py-3 text-lg font-bold ${total && count >= total ? "bg-success text-success-foreground" : "bg-secondary"}`}>
-      📝 {count}/{total} Teams fertig
+      📝 {count}/{total} Teams fertig{allIn ? " – Alle Antworten abgegeben!" : ""}
     </div>
   );
 }
@@ -273,7 +279,13 @@ function AdminControl() {
                 <AdminTimer />
                 <div className="flex gap-3">
                   <button onClick={() => q.playSfx("correct")} className="flex items-center gap-1 rounded-lg bg-success px-5 py-3 text-lg font-bold text-success-foreground"><Check className="h-5 w-5" /> Richtig</button>
-                  <button onClick={() => q.playSfx("wrong")} className="flex items-center gap-1 rounded-lg bg-destructive px-5 py-3 text-lg font-bold text-destructive-foreground"><X className="h-5 w-5" /> Falsch</button>
+                  <button onClick={() => {
+                    q.playSfx("wrong");
+                    if (q.room && question.type === "buzzer" && q.buzzerWinner && q.phase === "guessing") {
+                      if (question.onWrongAnswer === "end_question") q.setPhase("locked");
+                      else q.lockOutBuzzer(q.buzzerWinner);
+                    }
+                  }} className="flex items-center gap-1 rounded-lg bg-destructive px-5 py-3 text-lg font-bold text-destructive-foreground"><X className="h-5 w-5" /> Falsch</button>
                 </div>
               </div>
               {q.phase === "guessing" && (
