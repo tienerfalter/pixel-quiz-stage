@@ -120,7 +120,7 @@ export interface LoadedQuizPackage extends QuizPackage {
   sourceFileName: string;
 }
 
-export type RoundStatus = "guessing" | "locked" | "resolved";
+export type RoundStatus = "ready" | "guessing" | "locked" | "resolved";
 export type Phase = RoundStatus;
 export type GameStatus = "intro" | "running" | "intermission" | "podium" | "farewell";
 

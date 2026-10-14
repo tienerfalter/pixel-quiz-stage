@@ -122,8 +122,15 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
 
   let body;
   const lockedOut = !!row?.state?.buzzerLocked?.includes(teamId);
-  if (phase === "guessing" && question && !needsInput(question) && lockedOut) {
-    body = <div className="rounded-3xl bg-destructive p-10 text-center text-destructive-foreground"><p className="text-5xl font-extrabold">Leider falsch!</p><p className="mt-3">Die anderen Teams dürfen jetzt buzzern.</p></div>;
+  if (phase === "ready" && question) {
+    body = <Info title="Bereithalten… Gleich geht's los!" text="Frage wird vorgelesen… Bereithalten!" />;
+  } else if (phase === "guessing" && question && !needsInput(question) && lockedOut) {
+    body = (
+      <div className="space-y-4">
+        <button disabled className="aspect-square w-full cursor-not-allowed rounded-full bg-muted p-6 text-2xl font-extrabold text-muted-foreground opacity-80">Bereits geantwortet – gesperrt für diese Frage</button>
+        <p className="rounded-2xl bg-destructive/20 p-4 text-lg font-bold">Du bist für diese Frage ausgeschieden</p>
+      </div>
+    );
   } else if (phase === "guessing" && question && !needsInput(question)) {
     body = winner ? (
       winner === teamId ? (
@@ -141,7 +148,7 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
   } else if (phase === "guessing") {
     body = <Info title="Frage läuft" text="Schau auf den Beamer und beratet euch im Team." />;
   } else if (phase === "locked" || phase === "resolved") {
-    body = <Info title="Zeit ist um!" text="Schau auf den Beamer." />;
+    body = <Info title="Die Zeit ist um!" text="Schau auf den Beamer." />;
   } else if (phase === "intermission" || phase === "podium" || phase === "farewell") {
     body = <Info title="Das Quiz ist vorbei" text="Schau auf den Beamer für die Siegerehrung!" />;
   } else {

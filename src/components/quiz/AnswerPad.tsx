@@ -25,11 +25,11 @@ function feedback(q: QuizQuestion, a: PadAnswer): { ok: boolean | null; text: st
   if (opts) {
     const idx = opts.findIndex((o) => o.isCorrect);
     const ok = idx >= 0 && a.option === LETTERS[idx];
-    return { ok, text: ok ? `Richtig! +${q.points} Punkte möglich` : idx >= 0 ? `Leider falsch – richtig war ${LETTERS[idx]}` : "Ausgewertet" };
+    return { ok, text: ok ? `Richtig! +${q.points} Punkte` : idx >= 0 ? `Leider falsch – richtig war ${LETTERS[idx]}` : "Ausgewertet" };
   }
   if (q.type === "grid_coords") {
     const ok = (q.correctCells ?? []).map((c) => c.toUpperCase()).includes(a.cell ?? "");
-    return { ok, text: ok ? `Volltreffer! +${q.points} Punkte möglich` : `Daneben – Ziel: ${(q.correctCells ?? []).join(", ")}` };
+    return { ok, text: ok ? `Volltreffer! +${q.points} Punkte` : `Daneben – Ziel: ${(q.correctCells ?? []).join(", ")}` };
   }
   if (q.type === "slider" && a.value !== undefined) {
     const diff = Math.abs(a.value - q.correctValue);
@@ -130,9 +130,9 @@ export function AnswerPad({ question, qIndex, phase, code, teamId }: {
       status = <div className={`rounded-2xl p-4 text-lg font-bold ${f.ok === true ? "bg-success text-success-foreground" : f.ok === false ? "bg-destructive text-destructive-foreground" : "bg-card"}`}>{f.text}</div>;
     } else status = <div className="rounded-2xl bg-card p-4 font-bold">Keine Antwort abgegeben</div>;
   } else if (phase === "locked") {
-    status = <div className="rounded-2xl bg-destructive/20 p-4 text-lg font-bold">Zeit ist um!{saved ? " Eure Antwort ist gespeichert." : ""}</div>;
+    status = <div className="rounded-2xl bg-destructive/20 p-4 text-lg font-bold">Die Zeit ist um! Schau auf den Beamer.</div>;
   } else if (saved) {
-    status = <div className="rounded-2xl bg-success/20 p-4 text-lg font-bold">Eingabe gespeichert! Warten auf Auflösung…</div>;
+    status = <div className="rounded-2xl bg-success/20 p-4 text-lg font-bold">Eingabe gespeichert! Warten auf Auswertung…</div>;
   }
 
   return (
