@@ -31,6 +31,7 @@ function DisplayPage() {
   useEffect(() => {
     if (status === "intermission") return startDrumRoll();
     if (status === "podium") playFanfare();
+    return undefined;
   }, [status]);
   const question = status === "running" ? quiz?.questions[currentQuestionIndex] : undefined;
   const bg = quiz?.branding?.backgroundImage;
@@ -97,7 +98,7 @@ function DisplayPage() {
 const CONFETTI_COLORS = ["var(--primary)", "var(--success)", "var(--destructive)", "var(--accent)"];
 const GOLD_COLORS = ["oklch(0.85 0.17 90)", "oklch(0.75 0.15 75)", "oklch(0.95 0.08 95)"];
 
-function Podium({ teams, title }: { teams: Team[]; title?: string }) {
+function Podium({ teams, title }: { teams: Team[]; title?: string | undefined }) {
   const ranked = [...teams].sort((a, b) => b.score - a.score).slice(0, 3);
   const order = [ranked[1], ranked[0], ranked[2]];
   const cfg = [
@@ -109,15 +110,15 @@ function Podium({ teams, title }: { teams: Team[]; title?: string }) {
     <div className="relative z-30 flex w-full flex-col items-center">
       <h1 className="mb-10 text-5xl font-extrabold">{title || "🏆 Siegerehrung"}</h1>
       <div className="flex items-end justify-center gap-6">
-        {order.map((t, i) => t ? (
-          <div key={t.id} className="flex w-64 flex-col items-center animate-in fade-in slide-in-from-bottom-16 fill-mode-both duration-1000" style={{ animationDelay: cfg[i].delay }}>
-            <p className={`font-extrabold ${cfg[i].place === 1 ? "text-5xl text-primary" : "text-3xl"}`}>{t.name}</p>
+        {order.map((t, i) => { const c = cfg[i]!; return t ? (
+          <div key={t.id} className="flex w-64 flex-col items-center animate-in fade-in slide-in-from-bottom-16 fill-mode-both duration-1000" style={{ animationDelay: c.delay }}>
+            <p className={`font-extrabold ${c.place === 1 ? "text-5xl text-primary" : "text-3xl"}`}>{t.name}</p>
             <p className="mb-3 mt-1 font-mono text-2xl text-muted-foreground">{t.score} Punkte</p>
-            <div className={`flex w-full items-start justify-center rounded-t-2xl bg-card/85 pt-4 backdrop-blur ${cfg[i].h} ${cfg[i].place === 1 ? "shadow-glow border-2 border-primary" : ""}`}>
-              <span className="text-6xl font-extrabold text-primary">{cfg[i].place}</span>
+            <div className={`flex w-full items-start justify-center rounded-t-2xl bg-card/85 pt-4 backdrop-blur ${c.h} ${c.place === 1 ? "shadow-glow border-2 border-primary" : ""}`}>
+              <span className="text-6xl font-extrabold text-primary">{c.place}</span>
             </div>
           </div>
-        ) : null)}
+        ) : null; })}
       </div>
     </div>
   );
