@@ -139,7 +139,7 @@ export function AnswerPad({ question, qIndex, phase, code, teamId, autoScoring =
   let status: React.ReactNode = null;
   if (phase === "resolved") {
     if (saved) {
-      const f = feedback(question, saved, autoScoring);
+      const f = feedback(question, saved, autoScoring, mine);
       status = <div className={`rounded-2xl p-4 text-lg font-bold ${f.ok === true ? "bg-success text-success-foreground" : f.ok === false ? "bg-destructive text-destructive-foreground" : "bg-card"}`}>{f.text}</div>;
     } else status = <div className="rounded-2xl bg-card p-4 font-bold">Keine Antwort abgegeben</div>;
   } else if (phase === "locked") {
