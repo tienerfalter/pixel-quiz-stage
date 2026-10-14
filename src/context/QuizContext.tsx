@@ -179,9 +179,17 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     buzzerResetSeq: 0,
     ...freshQuestionState({ playing: false, volume: 0.8, restartSeq: 0 }),
   });
-  const [room, setRoom] = useState<RoomLink | null>(null);
+  // Viewer-Rolle sofort aus der URL erkennen, damit der Beamer-Tab nie seinen
+  // leeren Anfangszustand an andere Tabs sendet (würde das Pult zurücksetzen).
+  const [room, setRoom] = useState<RoomLink | null>(() => {
+    if (typeof window === "undefined") return null;
+    const code = new URLSearchParams(window.location.search).get("room");
+    return code && window.location.pathname.startsWith("/display")
+      ? { code: code.toUpperCase(), role: "viewer" }
+      : null;
+  });
   const [buzzerWinner, setBuzzerWinner] = useState<string | null>(null);
-  const roomRef = useRef(room);
+  const roomRef = useRef<RoomLink | null>(room);
   roomRef.current = room;
   const channelRef = useRef<BroadcastChannel | null>(null);
   const fromRemote = useRef(false);
