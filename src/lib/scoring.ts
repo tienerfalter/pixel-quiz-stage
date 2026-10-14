@@ -22,11 +22,18 @@ export type ChoiceRank = { team_id: string; rank: number; points: number };
 
 /** Correct choice answers ordered by submission time, with rank and integer points. */
 export function choiceRanking(q: QuizQuestion, answers: ScoredAnswer[], revealedClues = 1): ChoiceRank[] {
-  const opts = q.type === "choice" || (q.type === "clue_ladder" && q.inputMode === "choice") ? q.options ?? [] : [];
-  const idx = opts.findIndex((o) => o.isCorrect);
-  if (idx < 0) return [];
-  const correct = [...answers].sort((a, b) => a.created_at.localeCompare(b.created_at)).filter((a) => a.answer.option === LETTERS[idx]);
-  const sc = q.type === "choice" ? q.scoring : undefined;
+  const sorted = [...answers].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  let correct: ScoredAnswer[];
+  if (q.type === "grid_coords") {
+    const cells = (q.correctCells ?? []).map((c) => c.toUpperCase());
+    correct = sorted.filter((a) => cells.includes((a.answer.cell ?? "").toUpperCase()));
+  } else {
+    const opts = q.type === "choice" || (q.type === "clue_ladder" && q.inputMode === "choice") ? q.options ?? [] : [];
+    const idx = opts.findIndex((o) => o.isCorrect);
+    if (idx < 0) return [];
+    correct = sorted.filter((a) => a.answer.option === LETTERS[idx]);
+  }
+  const sc = q.type === "choice" || q.type === "grid_coords" ? q.scoring : undefined;
   return correct.map((a, i) => {
     let points: number;
     if (sc?.mode === "rank_bonus") points = sc.pointsByRank?.[i] ?? sc.fallbackPoints ?? 1;
@@ -37,7 +44,7 @@ export function choiceRanking(q: QuizQuestion, answers: ScoredAnswer[], revealed
   });
 }
 
-export const isRankBonus = (q: QuizQuestion) => q.type === "choice" && q.scoring?.mode === "rank_bonus";
+export const isRankBonus = (q: QuizQuestion) => (q.type === "choice" || q.type === "grid_coords") && q.scoring?.mode === "rank_bonus";
 
 /** Computes point awards per team for answer-based questions at resolution time. */
 export function computeAwards(q: QuizQuestion, answers: ScoredAnswer[], revealedClues = 1): Record<string, number> {
@@ -47,8 +54,7 @@ export function computeAwards(q: QuizQuestion, answers: ScoredAnswer[], revealed
   if (opts) {
     choiceRanking(q, answers, revealedClues).forEach((r) => { out[r.team_id] = r.points; });
   } else if (q.type === "grid_coords") {
-    const cells = (q.correctCells ?? []).map((c) => c.toUpperCase());
-    sorted.forEach((a) => { if (cells.includes((a.answer.cell ?? "").toUpperCase())) out[a.team_id] = q.points ?? 0; });
+    choiceRanking(q, answers).forEach((r) => { out[r.team_id] = r.points; });
   } else if (q.type === "slider") {
     const withDiff = sorted.filter((a) => typeof a.answer.value === "number").map((a) => ({ id: a.team_id, d: Math.abs(a.answer.value! - q.correctValue) }));
     if (q.scoring?.mode === "tolerance_tiers" && q.scoring.tiers?.length) {

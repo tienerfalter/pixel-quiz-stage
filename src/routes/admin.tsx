@@ -144,7 +144,7 @@ function AnswerCount({ code }: { code: string }) {
   const question = q.quiz?.questions[idx];
   const [count, setCount] = useState(0);
   const relevant = !!question && q.status === "running" && needsInput(question);
-  const autoLock = !!question && ["choice", "slider", "grid_coords"].includes(question.type);
+  const autoLock = !!question && (["choice", "slider", "grid_coords"].includes(question.type) || (question.type === "clue_ladder" && question.inputMode === "choice"));
   const total = q.teams.length;
   const allIn = total > 0 && count >= total;
   const { phase, setPhase } = q;
@@ -307,6 +307,7 @@ function AdminControl() {
                 <div className="flex gap-3">
                   <button onClick={() => {
                     q.playSfx("correct");
+                    q.setAudio({ playing: false });
                     const w = q.buzzerWinner;
                     if (q.autoScoring && isBuzzerRound && w && pts > 0) bookOnce(`${qKey}-ok-${w}`, () => q.adjustScore(w, pts));
                   }} className="flex items-center gap-1 rounded-lg bg-success px-5 py-3 text-lg font-bold text-success-foreground"><Check className="h-5 w-5" /> Richtig</button>
@@ -352,6 +353,10 @@ function AdminControl() {
               <div key={t.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-secondary px-3 py-2">
                 <input value={t.name} onChange={(e) => q.renameTeam(t.id, e.target.value)} onBlur={(e) => q.room && e.target.value.trim() && rename({ data: { code: q.room.code, id: t.id, name: e.target.value.trim() } })} aria-label="Teamname" className="min-w-0 flex-1 rounded-md bg-background px-2 py-1 font-semibold" />
                 <span className="w-12 text-center font-mono text-lg">{t.score}</span>
+                {t.lastDelta ? (<>
+                  <span className={`rounded-full px-2 py-0.5 font-mono text-xs font-bold ${t.lastDelta > 0 ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}`}>{t.lastDelta > 0 ? `+${t.lastDelta}` : t.lastDelta}</span>
+                  <button onClick={() => q.undoScore(t.id)} className="rounded-md px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-muted">↩ Rückgängig</button>
+                </>) : null}
                 {[-1, 1, 2, 5].map((d) => (
                   <button key={d} onClick={() => q.adjustScore(t.id, d)} className={`h-8 w-10 rounded-md text-sm font-bold ${d < 0 ? "bg-muted" : "bg-primary text-primary-foreground"}`}>{d > 0 ? `+${d}` : d}</button>
                 ))}

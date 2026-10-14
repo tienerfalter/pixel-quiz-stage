@@ -54,6 +54,7 @@ export function StageQuestion({ question }: { question: QuizQuestion }) {
     case "choice":
       return (
         <div className="flex w-full max-w-6xl flex-col items-center">
+        <DefaultMedia question={question} />
         <div className="mt-10 grid w-full grid-cols-2 gap-6">
           {question.options.map((o, i) => (
             <div key={o.id} className={`flex items-center gap-5 rounded-2xl border-2 px-8 py-6 text-left backdrop-blur transition-all duration-700 ${
@@ -69,6 +70,8 @@ export function StageQuestion({ question }: { question: QuizQuestion }) {
     case "slider": {
       const { min, max, unit } = question.sliderConfig;
       return (
+        <div className="flex w-full flex-col items-center">
+        <DefaultMedia question={question} />
         <div className="mt-14 w-full max-w-5xl">
           <div className="relative h-4 rounded-full bg-gradient-to-r from-secondary via-primary/70 to-primary">
             {resolved && (
@@ -85,10 +88,11 @@ export function StageQuestion({ question }: { question: QuizQuestion }) {
             <span>{fmtValue(max, unit)}</span>
           </div>
         </div>
+        </div>
       );
     }
     case "clue_ladder":
-      return <ClueLadder question={question} />;
+      return <div className="flex w-full flex-col items-center"><DefaultMedia question={question} /><ClueLadder question={question} /></div>;
     case "mosaic":
       return <Mosaic question={question} />;
     case "grid_coords":
@@ -107,7 +111,7 @@ function DefaultMedia({ question }: { question: QuizQuestion }) {
   if (question.mediaType === "audio" && question.media) return <AudioStage src={question.media} />;
   if (!question.media) return null;
   return (
-    <img src={question.media} alt="" className="mt-10 max-h-[55vh] w-auto max-w-3xl rounded-2xl object-contain" />
+    <img src={question.media} alt="" className="mt-10 max-h-[40vh] w-auto max-w-3xl rounded-2xl object-contain" />
   );
 }
 
@@ -236,6 +240,7 @@ function GridCoords({ question }: { question: Extract<QuizQuestion, { type: "gri
       </div>
     </div>
     {resolved && <SolutionBanner notes={{ solution: question.hostNotes?.solution ?? "" }} />}
+    {resolved && isRankBonus(question) && <RankList question={question} />}
     </div>
   );
 }
