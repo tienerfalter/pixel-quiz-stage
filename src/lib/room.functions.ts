@@ -129,7 +129,7 @@ export const pushRoom = createServerFn({ method: "POST" })
     if (data.timerSecondsLeft !== undefined) patch["timer_seconds_left"] = data.timerSecondsLeft;
     if (data.scores) patch["scores"] = data.scores;
     if (data.resetBuzzer) patch["buzzer_winner"] = null;
-    const { error } = await db.from("quiz_rooms").update(patch).eq("room_code", data.code);
+    const { error } = await db.from("quiz_rooms").update(patch as never).eq("room_code", data.code);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
