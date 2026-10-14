@@ -14,13 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      quiz_rooms: {
+        Row: {
+          buzzer_winner: string | null
+          created_at: string
+          current_question_index: number
+          phase: string
+          quiz: Json | null
+          room_code: string
+          scores: Json
+          state: Json | null
+          timer_seconds_left: number
+          updated_at: string
+        }
+        Insert: {
+          buzzer_winner?: string | null
+          created_at?: string
+          current_question_index?: number
+          phase?: string
+          quiz?: Json | null
+          room_code: string
+          scores?: Json
+          state?: Json | null
+          timer_seconds_left?: number
+          updated_at?: string
+        }
+        Update: {
+          buzzer_winner?: string | null
+          created_at?: string
+          current_question_index?: number
+          phase?: string
+          quiz?: Json | null
+          room_code?: string
+          scores?: Json
+          state?: Json | null
+          timer_seconds_left?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      room_teams: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          room_code: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          room_code: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          room_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_teams_room_code_fkey"
+            columns: ["room_code"]
+            isOneToOne: false
+            referencedRelation: "quiz_rooms"
+            referencedColumns: ["room_code"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      join_room: { Args: { _name: string; _room: string }; Returns: string }
+      press_buzzer: { Args: { _room: string; _team: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
