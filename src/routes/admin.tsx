@@ -87,11 +87,22 @@ function AdminPage() {
           </section>
         )}
 
-        {q.quiz && q.status === "outro" && (
+        {q.quiz && (q.status === "intermission" || q.status === "podium" || q.status === "farewell") && (
           <section className="space-y-4 rounded-2xl border-2 border-primary/40 bg-card p-8 text-center">
-            <h2 className="text-3xl font-extrabold">Siegerehrung läuft 🏆</h2>
-            <p className="text-muted-foreground">Der Beamer zeigt den Abschlussbildschirm.</p>
-            <button onClick={() => q.goToQuestion(total - 1)} className="rounded-xl bg-secondary px-5 py-3 font-bold">← Zurück zur letzten Frage</button>
+            <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">
+              Finale · {q.status === "intermission" ? "Stufe A: Auswertung" : q.status === "podium" ? "Stufe B: Siegerehrung" : "Stufe C: Verabschiedung"}
+            </p>
+            {q.status === "intermission" && (
+              <button onClick={() => q.setStatus("podium")} className="shadow-glow w-full animate-pulse rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">Siegerehrung starten 🏆</button>
+            )}
+            {q.status === "podium" && (
+              <button onClick={() => q.setStatus("farewell")} className="shadow-glow w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">Verabschiedung / Abspann ▶</button>
+            )}
+            {q.status === "farewell" && <p className="text-muted-foreground">Der Beamer zeigt den Abschiedsbildschirm.</p>}
+            <button
+              onClick={() => (q.status === "intermission" ? q.goToQuestion(total - 1) : q.setStatus(q.status === "farewell" ? "podium" : "intermission"))}
+              className="rounded-xl bg-secondary px-5 py-3 font-bold"
+            >← Zurück</button>
           </section>
         )}
 
@@ -141,7 +152,7 @@ function AdminPage() {
               )}
               {q.phase === "resolved" && (
                 <button onClick={q.currentQuestionIndex >= total - 1 ? q.endQuiz : q.nextQuestion} className="w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">
-                  {q.currentQuestionIndex >= total - 1 ? "Quiz beenden & Siegerehrung ▶" : "Nächste Frage ▶"}
+                  {q.currentQuestionIndex >= total - 1 ? "Zur Auswertung / Zwischenbildschirm ▶" : "Nächste Frage ▶"}
                 </button>
               )}
             </section>

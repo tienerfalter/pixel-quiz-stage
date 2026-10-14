@@ -106,7 +106,12 @@ export interface QuizPackage {
   branding?: QuizBranding;
   intro?: QuizIntro;
   questions: QuizQuestion[];
-  outro?: { title?: string; message?: string };
+  outro?: {
+    title?: string;
+    message?: string;
+    intermission?: { title?: string; subtitle?: string; image?: string };
+    farewell?: string | { title?: string; message?: string; image?: string; logo?: string };
+  };
 }
 
 export interface LoadedQuizPackage extends QuizPackage {
@@ -117,7 +122,7 @@ export interface LoadedQuizPackage extends QuizPackage {
 
 export type RoundStatus = "guessing" | "locked" | "resolved";
 export type Phase = RoundStatus;
-export type GameStatus = "intro" | "running" | "outro";
+export type GameStatus = "intro" | "running" | "intermission" | "podium" | "farewell";
 
 export interface Team {
   id: string;

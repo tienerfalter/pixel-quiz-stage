@@ -50,6 +50,7 @@ interface QuizContextValue extends SyncState {
   renameTeam: (id: string, name: string) => void;
   startQuiz: () => void;
   endQuiz: () => void;
+  setStatus: (status: GameStatus) => void;
   setShowScores: (on: boolean) => void;
   adjustScore: (id: string, delta: number) => void;
   revealRandomTile: (total: number) => void;
@@ -78,7 +79,7 @@ const FALLBACK_CONTEXT: QuizContextValue = {
   currentQuestionIndex: 0,
   phase: "guessing",
   status: "intro",
-  showScores: true,
+  showScores: false,
   teams: [],
   revealedTiles: [],
   revealedClues: 1,
@@ -96,6 +97,7 @@ const FALLBACK_CONTEXT: QuizContextValue = {
   renameTeam: noop,
   startQuiz: noop,
   endQuiz: noop,
+  setStatus: noop,
   setShowScores: noop,
   adjustScore: noop,
   revealRandomTile: noop,
@@ -148,7 +150,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     quiz: null,
     currentQuestionIndex: 0,
     status: "intro",
-    showScores: true,
+    showScores: false,
     teams: DEFAULT_TEAMS,
     sfx: { kind: "correct", seq: 0 },
     ...freshQuestionState({ playing: false, volume: 0.8, restartSeq: 0 }),
@@ -189,7 +191,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     setState((s) => {
       if (s.quiz && s.quiz !== quiz) revokeQuizPackage(s.quiz);
       const fresh = freshQuestionState(s.audio);
-      return { ...s, quiz, currentQuestionIndex: 0, status: "intro", showScores: !quiz?.meta.hideScoresLive, ...fresh };
+      return { ...s, quiz, currentQuestionIndex: 0, status: "intro", showScores: false, ...fresh };
     });
   }, []);
 
@@ -231,7 +233,8 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     renameTeam: (id, name) => setState((s) => ({ ...s, teams: s.teams.map((t) => (t.id === id ? { ...t, name } : t)) })),
     startQuiz: () =>
       setState((s) => ({ ...s, status: "running", currentQuestionIndex: 0, ...freshQuestionState(s.audio, s.quiz?.questions[0]) })),
-    endQuiz: () => setState((s) => ({ ...s, status: "outro", ...freshQuestionState(s.audio) })),
+    endQuiz: () => setState((s) => ({ ...s, status: "intermission", ...freshQuestionState(s.audio) })),
+    setStatus: (status) => setState((s) => ({ ...s, status })),
     setShowScores: (showScores) => setState((s) => ({ ...s, showScores })),
     removeTeam: (id) => setState((s) => ({ ...s, teams: s.teams.filter((t) => t.id !== id) })),
     adjustScore: (id, delta) =>
