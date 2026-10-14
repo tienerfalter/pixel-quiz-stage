@@ -70,7 +70,7 @@ export async function loadQuizPackage(file: File): Promise<LoadedQuizPackage> {
 
   return {
     meta: pkg.meta,
-    branding: replaceAssetPaths(pkg.branding, assetUrls),
+    ...(pkg.branding ? { branding: replaceAssetPaths(pkg.branding, assetUrls) } : {}),
     questions: replaceAssetPaths(pkg.questions, assetUrls),
     assetUrls,
     sourceFileName: file.name,
