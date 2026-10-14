@@ -10,6 +10,7 @@ import { needsInput } from "@/components/quiz/AnswerPad";
 import { QuestionControls } from "@/components/quiz/QuestionControls";
 import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";
 import { AdminTimer } from "@/components/quiz/TimerDisplay";
+import { computeAwards, roundPoints, type ScoredAnswer } from "@/lib/scoring";
 
 const PHASE_LABEL = { ready: "Vorlesen", guessing: "Raten", locked: "Gesperrt", resolved: "Aufgelöst" } as const;
 import { loadQuizPackage } from "@/utils/quizPackageLoader";
@@ -195,6 +196,20 @@ function AdminControl() {
 
   const question = q.quiz?.questions[q.currentQuestionIndex];
   const total = q.quiz?.questions.length ?? 0;
+  const pts = question ? roundPoints(question, q.revealedTiles.length, q.revealedClues) : 0;
+  const isBuzzerRound = !!question && !needsInput(question);
+  const booked = useRef(new Set<string>());
+  const bookOnce = (key: string, fn: () => void) => { if (booked.current.has(key)) return; booked.current.add(key); fn(); };
+  const qKey = `${q.quiz?.sourceFileName}-${q.currentQuestionIndex}`;
+
+  async function resolve() {
+    q.setPhase("resolved");
+    if (!q.autoScoring || !q.room || !question || !needsInput(question)) return;
+    const { data } = await supabase.from("room_answers").select("team_id,answer,created_at")
+      .eq("room_code", q.room.code).eq("question_index", q.currentQuestionIndex);
+    const awards = computeAwards(question, (data ?? []) as ScoredAnswer[], q.revealedClues);
+    bookOnce(`${qKey}-resolve`, () => Object.entries(awards).forEach(([id, p]) => q.adjustScore(id, p)));
+  }
 
   return (
     <main className="min-h-screen px-6 py-8">
@@ -202,7 +217,13 @@ function AdminControl() {
         <header className="flex items-center justify-between">
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">← Start</Link>
           <h1 className="text-2xl font-bold">Quizmaster Control</h1>
-          <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase">{PHASE_LABEL[q.phase]}</span>
+          <div className="flex items-center gap-3">
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold">
+              <input type="checkbox" checked={q.autoScoring} onChange={(e) => q.setAutoScoring(e.target.checked)} className="h-4 w-4 accent-primary" />
+              Punkte automatisch verbuchen (Auto-Scoring)
+            </label>
+            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold uppercase">{PHASE_LABEL[q.phase]}</span>
+          </div>
         </header>
 
         <div
@@ -265,7 +286,9 @@ function AdminControl() {
             <section className="rounded-2xl border bg-card p-6">
               <div className="mb-3 flex items-center gap-2">
                 <span className="rounded-md bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">{TYPE_LABEL[question.type] ?? question.type}</span>
-                <span className="text-sm text-muted-foreground">{question.points} Punkte</span>
+                <span className="text-sm font-bold text-accent">Mögliche Punkte dieser Runde: {pts} Punkte</span>
+                {question.penaltyPoints ? <span className="text-sm text-muted-foreground">· Abzug bei Fehler: {question.penaltyPoints}</span> : null}
+                <span className="text-xs text-muted-foreground">· {q.autoScoring ? "Auto-Scoring an" : "Manuelle Vergabe"}</span>
               </div>
               <h3 className="text-lg font-semibold text-muted-foreground">{question.title}</h3>
               <p className="mt-1 text-2xl font-bold">{question.question}</p>
@@ -282,9 +305,15 @@ function AdminControl() {
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <AdminTimer />
                 <div className="flex gap-3">
-                  <button onClick={() => q.playSfx("correct")} className="flex items-center gap-1 rounded-lg bg-success px-5 py-3 text-lg font-bold text-success-foreground"><Check className="h-5 w-5" /> Richtig</button>
+                  <button onClick={() => {
+                    q.playSfx("correct");
+                    const w = q.buzzerWinner;
+                    if (q.autoScoring && isBuzzerRound && w && pts > 0) bookOnce(`${qKey}-ok-${w}`, () => q.adjustScore(w, pts));
+                  }} className="flex items-center gap-1 rounded-lg bg-success px-5 py-3 text-lg font-bold text-success-foreground"><Check className="h-5 w-5" /> Richtig</button>
                   <button onClick={() => {
                     q.playSfx("wrong");
+                    const w = q.buzzerWinner;
+                    if (q.autoScoring && isBuzzerRound && w && question.penaltyPoints) bookOnce(`${qKey}-bad-${w}`, () => q.adjustScore(w, -question.penaltyPoints!));
                     if (q.room && question.type === "buzzer" && q.buzzerWinner && q.phase === "guessing") {
                       if (question.onWrongAnswer === "end_question") q.setPhase("locked");
                       else q.lockOutBuzzer(q.buzzerWinner);
@@ -299,7 +328,7 @@ function AdminControl() {
                 <button onClick={() => q.setPhase("locked")} className="w-full rounded-xl bg-secondary py-4 text-lg font-bold hover:bg-muted">⏸ Eingaben sperren</button>
               )}
               {q.phase === "locked" && (
-                <button onClick={() => q.setPhase("resolved")} className="shadow-glow w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">Lösung auf Beamer enthüllen ▶</button>
+                <button onClick={resolve} className="shadow-glow w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">Lösung auf Beamer enthüllen ▶</button>
               )}
               {q.phase === "resolved" && (
                 <button onClick={q.currentQuestionIndex >= total - 1 ? q.endQuiz : q.nextQuestion} className="w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">
@@ -326,6 +355,9 @@ function AdminControl() {
                 {[-1, 1, 2, 5].map((d) => (
                   <button key={d} onClick={() => q.adjustScore(t.id, d)} className={`h-8 w-10 rounded-md text-sm font-bold ${d < 0 ? "bg-muted" : "bg-primary text-primary-foreground"}`}>{d > 0 ? `+${d}` : d}</button>
                 ))}
+                {question && q.status === "running" && pts > 0 && (
+                  <button onClick={() => q.adjustScore(t.id, pts)} className="h-8 rounded-md bg-accent px-3 text-sm font-extrabold text-accent-foreground shadow-glow">+{pts} Pkt</button>
+                )}
                 <button onClick={() => { q.removeTeam(t.id); if (q.room) kick({ data: { code: q.room.code, id: t.id } }); }} aria-label="Team entfernen" className="rounded-md p-2 text-destructive hover:bg-muted"><Trash2 className="h-4 w-4" /></button>
               </div>
             ))}
