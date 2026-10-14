@@ -62,8 +62,23 @@ export function playTick() {
   tone(1200, 0, 0.06, "triangle", 0.15);
 }
 
-/** Synthesized snare-like drum roll (loops until stopped). Returns a stop function. */
+/** Drum roll from /sounds/drumroll.mp3 (looped), synth fallback. Returns a stop function. */
 export function startDrumRoll(): () => void {
+  if (typeof window === "undefined") return () => {};
+  let stopSynth: (() => void) | null = null;
+  let stopped = false;
+  const a = new Audio("/sounds/drumroll.mp3");
+  a.loop = true;
+  const fb = () => { if (!stopped && !stopSynth) stopSynth = synthDrumRoll(); };
+  a.addEventListener("error", fb, { once: true });
+  a.play().catch((e: unknown) => {
+    if (e instanceof DOMException && e.name === "NotAllowedError") return;
+    fb();
+  });
+  return () => { stopped = true; a.pause(); a.currentTime = 0; stopSynth?.(); };
+}
+
+function synthDrumRoll(): () => void {
   const c = ac();
   if (!c) return () => {};
   const len = c.sampleRate * 0.05;
@@ -88,14 +103,16 @@ export function startDrumRoll(): () => void {
   return () => { alive = false; window.clearInterval(id); master.disconnect(); };
 }
 
-/** Synthesized victory fanfare. */
+/** Victory fanfare from /sounds/fanfare.mp3, synth fallback. */
 export function playFanfare() {
-  const notes: [number, number, number][] = [
-    [523.25, 0, 0.18], [523.25, 0.2, 0.18], [523.25, 0.4, 0.18], [659.25, 0.6, 0.5],
-    [587.33, 1.15, 0.18], [659.25, 1.35, 0.18], [783.99, 1.55, 1.2],
-  ];
-  for (const [f, t, d] of notes) {
-    tone(f, t, d, "sawtooth", 0.12);
-    tone(f * 2, t, d, "triangle", 0.08);
-  }
+  playFile("/sounds/fanfare.mp3", () => {
+    const notes: [number, number, number][] = [
+      [523.25, 0, 0.18], [523.25, 0.2, 0.18], [523.25, 0.4, 0.18], [659.25, 0.6, 0.5],
+      [587.33, 1.15, 0.18], [659.25, 1.35, 0.18], [783.99, 1.55, 1.2],
+    ];
+    for (const [f, t, d] of notes) {
+      tone(f, t, d, "sawtooth", 0.12);
+      tone(f * 2, t, d, "triangle", 0.08);
+    }
+  });
 }
