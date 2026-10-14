@@ -128,7 +128,7 @@ function Farewell({ quiz }: { quiz: NonNullable<ReturnType<typeof useQuiz>["quiz
   const f = quiz.outro?.farewell;
   const obj = typeof f === "object" ? f : undefined;
   const title = (typeof f === "string" ? f : obj?.title) || "Vielen Dank fürs Mitspielen & Gute Heimreise!";
-  const logo = obj?.logo || quiz.branding?.logo;
+  const logo = obj?.logo || quiz.branding?.cornerLogo;
   return (
     <div className="relative z-30 flex flex-col items-center rounded-3xl bg-card/70 px-16 py-12 backdrop-blur animate-in fade-in duration-[2000ms]">
       {obj?.image && <img src={obj.image} alt="" className="mb-8 max-h-[35vh] rounded-2xl object-contain" />}
