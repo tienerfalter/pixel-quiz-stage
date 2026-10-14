@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep resolved-stage presentation in StageQuestion and scope compact sizing to the special-question resolved display, so admin behavior and guessing layouts stay unchanged.

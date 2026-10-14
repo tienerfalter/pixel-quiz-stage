@@ -74,3 +74,16 @@
 
 @utility bg-stage { background: var(--gradient-stage); }
 @utility shadow-glow { box-shadow: var(--glow-primary); }
+
+.stage-resolved-media { max-height: 32vh; }
+.stage-solution-banner { overflow-wrap: anywhere; }
+
+@media (max-height: 800px) {
+  .stage-resolved-content > p { font-size: 1rem; }
+  .stage-resolved-content > h1 { font-size: 1.75rem; }
+  .stage-resolved-content .stage-solution-banner { padding: 0.5rem 1rem; }
+  .stage-resolved-content .stage-solution-banner > p:first-child { font-size: 1.5rem; }
+  .stage-resolved-content .stage-solution-banner > p + p { font-size: 1rem; margin-top: 0.25rem; }
+  .stage-resolved-clue { padding: 0.375rem 1rem; }
+  .stage-resolved-clue > span { font-size: 1.125rem; }
+}

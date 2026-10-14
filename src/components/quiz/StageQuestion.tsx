@@ -21,6 +21,15 @@ function SolutionBox({ text }: { text?: string | undefined }) {
   );
 }
 
+function SolutionBanner({ notes }: { notes?: QuizQuestion["hostNotes"] }) {
+  return (
+    <div className="stage-solution-banner w-full rounded-xl border-2 border-success bg-success/20 px-6 py-3 text-center motion-safe:animate-in motion-safe:fade-in duration-500">
+      <p className="text-3xl font-extrabold leading-tight"><span className="text-success">Lösung: </span>{notes?.solution || ""}</p>
+      {notes?.trivia && <p className="mt-2 text-lg leading-snug text-muted-foreground">{notes.trivia}</p>}
+    </div>
+  );
+}
+
 export function StageQuestion({ question }: { question: QuizQuestion }) {
   const { phase } = useQuiz();
   const resolved = phase === "resolved";
@@ -130,22 +139,22 @@ function ClueLadder({ question }: { question: Extract<QuizQuestion, { type: "clu
   const revealedClues = phase === "resolved" ? clues.length : rc;
   const pts = ppl[Math.min(revealedClues, ppl.length) - 1] ?? question.points;
   return (
-    <div className="mt-8 w-full max-w-5xl">
-      <p className="mb-6 text-3xl font-bold">Aktuelle Stufe: <span className="text-primary">{pts} Punkte</span></p>
-      <div className="space-y-3">
+    <div className={`w-full max-w-5xl ${phase === "resolved" ? "mt-4" : "mt-8"}`}>
+      {phase === "resolved" ? <div className="mb-3"><SolutionBanner notes={{ solution: question.hostNotes?.solution }} /></div>
+        : <p className="mb-6 text-3xl font-bold">Aktuelle Stufe: <span className="text-primary">{pts} Punkte</span></p>}
+      <div className={phase === "resolved" ? "space-y-2" : "space-y-3"}>
         {clues.map((c, i) => {
           const open = i < revealedClues;
           return (
-            <div key={i} className={`flex items-center gap-5 rounded-2xl border px-6 py-4 text-left transition-all duration-500 ${open ? "border-primary/50 bg-card/90" : "bg-card/30"}`}>
-              <span className="font-mono text-2xl font-bold text-primary">{i + 1}</span>
-              {open ? <span className="text-2xl font-semibold animate-in fade-in slide-in-from-left-4">{c}</span>
+            <div key={i} className={`flex items-center gap-5 rounded-2xl border px-6 text-left transition-all duration-500 ${phase === "resolved" ? "stage-resolved-clue py-2" : "py-4"} ${open ? "border-primary/50 bg-card/90" : "bg-card/30"}`}>
+              <span className={`font-mono font-bold text-primary ${phase === "resolved" ? "text-xl" : "text-2xl"}`}>{i + 1}</span>
+              {open ? <span className={`font-semibold animate-in fade-in slide-in-from-left-4 ${phase === "resolved" ? "text-xl leading-snug" : "text-2xl"}`}>{c}</span>
                 : <span className="flex items-center gap-2 text-xl text-muted-foreground"><Lock className="h-5 w-5" /> ???</span>}
-              <span className="ml-auto font-mono text-muted-foreground">{ppl[i] ?? "–"} P</span>
+              <span className="ml-auto shrink-0 font-mono text-muted-foreground">{ppl[i] ?? "–"} P</span>
             </div>
           );
         })}
       </div>
-      {phase === "resolved" && <div className="flex justify-center"><SolutionBox text={question.hostNotes?.solution} /></div>}
     </div>
   );
 }
@@ -160,9 +169,9 @@ function Mosaic({ question }: { question: Extract<QuizQuestion, { type: "mosaic"
   const tier = [...(question.pointsPerTier ?? [])].sort((a, b) => a.maxRevealedPercent - b.maxRevealedPercent)
     .find((t) => percent <= t.maxRevealedPercent);
   return (
-    <div className="relative mt-8 w-full max-w-5xl">
+    <div className={`relative w-full max-w-5xl ${phase === "resolved" ? "mt-4" : "mt-8"}`}>
       <div className="relative overflow-hidden rounded-2xl">
-        <img src={question.media} alt="" className="block max-h-[60vh] w-full object-contain" />
+        <img src={question.media} alt="" className={`block w-full object-contain ${phase === "resolved" ? "stage-resolved-media" : "max-h-[60vh]"}`} />
         <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
           {Array.from({ length: total }).map((_, i) => {
             const open = revealedTiles.includes(i);
@@ -174,19 +183,23 @@ function Mosaic({ question }: { question: Extract<QuizQuestion, { type: "mosaic"
           })}
         </div>
       </div>
-      <div className="mt-3 flex justify-between text-lg text-muted-foreground">
+      {phase === "resolved" ? <div className="mt-3"><SolutionBanner notes={question.hostNotes} /></div> : <div className="mt-3 flex justify-between text-lg text-muted-foreground">
         <span>{percent}% sichtbar</span>
         <span>Noch erreichbar: <span className="font-bold text-primary">{tier?.points ?? 0} Punkte</span></span>
-      </div>
+      </div>}
     </div>
   );
 }
 
 function GridCoords({ question }: { question: Extract<QuizQuestion, { type: "grid_coords" }> }) {
+  const { phase } = useQuiz();
+  const resolved = phase === "resolved";
   const rows = question.grid?.rows || 6;
   const cols = question.grid?.cols || 6;
+  const correctCells = new Set((question.correctCells ?? []).map((cell) => cell.trim().toUpperCase()));
   return (
-    <div className="mt-8 inline-grid" style={{ gridTemplateColumns: `2rem auto` }}>
+    <div className={`flex max-w-5xl flex-col items-center ${resolved ? "mt-4 gap-3" : "mt-8"}`}>
+    <div className="inline-grid max-w-full" style={{ gridTemplateColumns: `2rem minmax(0, auto)` }}>
       <span />
       <div className="grid text-center font-mono text-xl text-primary" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
         {Array.from({ length: cols }).map((_, c) => <span key={c}>{LETTERS[c]}</span>)}
@@ -195,11 +208,19 @@ function GridCoords({ question }: { question: Extract<QuizQuestion, { type: "gri
         {Array.from({ length: rows }).map((_, r) => <span key={r} className="flex items-center">{r + 1}</span>)}
       </div>
       <div className="relative">
-        <img src={question.media} alt="" className="block max-h-[60vh] rounded-xl object-contain" />
+        <img src={question.media} alt="" className={`block max-w-full rounded-xl object-contain ${resolved ? "stage-resolved-media" : "max-h-[60vh]"}`} />
         <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
-          {Array.from({ length: rows * cols }).map((_, i) => <div key={i} className="border border-foreground/20" />)}
+          {Array.from({ length: rows * cols }).map((_, i) => {
+            const cell = `${LETTERS[i % cols]}${Math.floor(i / cols) + 1}`;
+            const correct = resolved && correctCells.has(cell);
+            return <div key={i} aria-label={correct ? `Zielzone ${cell}` : undefined} className={`flex items-center justify-center transition-colors duration-500 ${correct ? "border-4 border-success bg-success/35" : "border border-foreground/20"}`}>
+              {correct && <span className="rounded bg-success px-1 font-mono text-lg font-bold text-success-foreground">{cell}</span>}
+            </div>;
+          })}
         </div>
       </div>
+    </div>
+    {resolved && <SolutionBanner notes={{ solution: question.hostNotes?.solution }} />}
     </div>
   );
 }
