@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Upload, X } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
+import { QuestionControls } from "@/components/quiz/QuestionControls";
 import { loadQuizPackage } from "@/utils/quizPackageLoader";
 
 export const Route = createFileRoute("/admin")({
@@ -98,6 +99,7 @@ function AdminPage() {
                   {question.hostNotes.trivia && <p className="mt-1 text-muted-foreground"><span className="font-semibold">Trivia:</span> {question.hostNotes.trivia}</p>}
                 </div>
               )}
+              <QuestionControls key={question.id} question={question} />
               <div className="mt-6 flex flex-wrap gap-3">
                 <button onClick={() => q.setRoundStatus("running")} className="rounded-lg bg-secondary px-4 py-2 font-semibold">▶ Starten</button>
                 <button onClick={() => q.setRoundStatus("locked")} className="rounded-lg bg-secondary px-4 py-2 font-semibold">⏸ Sperren</button>
