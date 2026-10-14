@@ -10,3 +10,5 @@
 <!-- LOVABLE:END -->
 
 - Keep resolved-stage presentation in StageQuestion and scope compact sizing to the special-question resolved display, so admin behavior and guessing layouts stay unchanged.
+- Live rooms: the host tab is the single writer (server fns gated by an encrypted host-key session); stage/players only read the room row via realtime, and players write only through the join_room/press_buzzer DB functions — keeps anonymous phones from altering game state.
+- Package media is uploaded to the private quiz-assets bucket with 24h signed URLs when a room opens — blob URLs only exist in the host browser.

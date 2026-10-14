@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { StageQuestion } from "@/components/quiz/StageQuestion";
 import { StageTimer } from "@/components/quiz/TimerDisplay";
 import { playCorrectSound, playWrongSound, startDrumRoll, playFanfare } from "@/utils/soundEffects";
@@ -8,6 +9,7 @@ import type { Team } from "@/types/quiz";
 import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";
 
 export const Route = createFileRoute("/display")({
+  validateSearch: (s: Record<string, unknown>) => ({ room: typeof s["room"] === "string" ? s["room"].toUpperCase() : undefined }),
   head: () => ({
     meta: [
       { title: "Bühnenanzeige – Quiz Show" },
@@ -22,7 +24,18 @@ export const Route = createFileRoute("/display")({
 });
 
 function DisplayPage() {
-  const { quiz, currentQuestionIndex, teams, sfx, nextQuestion, phase, status, showScores } = useQuiz();
+  const { quiz, currentQuestionIndex, teams, sfx, nextQuestion, phase, status, showScores, room, setRoom, buzzerWinner } = useQuiz();
+  const { room: roomParam } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const [codeInput, setCodeInput] = useState("");
+  const [askCode, setAskCode] = useState(false);
+  useEffect(() => {
+    if (roomParam) setRoom({ code: roomParam, role: "viewer" });
+    return () => { if (roomParam) setRoom(null); };
+  }, [roomParam]); // eslint-disable-line react-hooks/exhaustive-deps
+  const roomCode = roomParam ?? room?.code;
+  const buzzTeam = teams.find((t) => t.id === buzzerWinner);
+  const joinUrl = roomCode && typeof window !== "undefined" ? `${window.location.origin}/play?room=${roomCode}` : "";
   useEffect(() => {
     if (sfx.seq === 0) return;
     if (sfx.kind === "correct") playCorrectSound();
@@ -68,6 +81,26 @@ function DisplayPage() {
             <p className="mt-6 text-2xl uppercase tracking-[0.4em] text-primary">
               {quiz?.intro?.subtitle || "Willkommen zum Quiz"}
             </p>
+            {roomCode && (
+              <div className="mt-10 flex items-center gap-8 rounded-3xl bg-card/85 px-10 py-6 backdrop-blur">
+                <div className="rounded-xl bg-foreground p-3"><QRCodeSVG value={joinUrl} size={160} /></div>
+                <div className="text-left">
+                  <p className="text-lg uppercase tracking-[0.3em] text-muted-foreground">Jetzt beitreten</p>
+                  <p className="font-mono text-7xl font-extrabold tracking-[0.2em] text-accent">{roomCode}</p>
+                  <p className="mt-1 text-lg text-muted-foreground">{joinUrl.replace(/^https?:\/\//, "")}</p>
+                </div>
+              </div>
+            )}
+            {!roomCode && !quiz && (
+              askCode ? (
+                <form onSubmit={(e) => { e.preventDefault(); if (codeInput.length >= 4) navigate({ search: { room: codeInput } }); }} className="mt-10 flex gap-3">
+                  <input autoFocus value={codeInput} onChange={(e) => setCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))} placeholder="RAUMCODE" className="rounded-xl border bg-input px-4 py-3 text-center font-mono text-3xl tracking-[0.3em] outline-none focus:border-primary" />
+                  <button className="rounded-xl bg-primary px-6 text-xl font-bold text-primary-foreground">Verbinden</button>
+                </form>
+              ) : (
+                <button onClick={() => setAskCode(true)} className="mt-10 rounded-xl bg-secondary px-6 py-3 text-lg font-semibold">Mit Live-Raum verbinden</button>
+              )
+            )}
           </div>
         ) : (
           <>
@@ -80,6 +113,11 @@ function DisplayPage() {
         )}
       </div>
 
+      {question && phase === "guessing" && buzzTeam && (
+        <div className="absolute inset-x-0 top-8 z-40 flex justify-center">
+          <div className="shadow-glow animate-in zoom-in rounded-2xl bg-accent px-10 py-4 text-4xl font-extrabold text-accent-foreground">🔔 {buzzTeam.name} ist dran!</div>
+        </div>
+      )}
       {status === "podium" && <Confetti gold />}
       {quiz && showScores && (status === "intro" || status === "running") && (
         <footer className="relative z-10 flex justify-center gap-6 pb-8">

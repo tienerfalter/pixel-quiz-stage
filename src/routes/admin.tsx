@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Plus, Trash2, Upload, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { hostStatus, kickTeam, openRoom, pushRoom, renameRoomTeam, unlockHost } from "@/lib/room.functions";
+import { publishQuizAssets } from "@/utils/roomAssets";
+import { Check, ChevronLeft, ChevronRight, KeyRound, Plus, Trash2, Upload, X } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
 import { QuestionControls } from "@/components/quiz/QuestionControls";
 import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";
@@ -33,7 +36,105 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 function AdminPage() {
+  const status = useServerFn(hostStatus);
+  const [unlocked, setUnlocked] = useState<boolean | null>(null);
+  useEffect(() => { status().then((r) => setUnlocked(r.unlocked)).catch(() => setUnlocked(false)); }, [status]);
+  if (unlocked === null) return <main className="flex min-h-screen items-center justify-center text-muted-foreground">Lade…</main>;
+  if (!unlocked) return <HostUnlock onUnlocked={() => setUnlocked(true)} />;
+  return <AdminControl />;
+}
+
+function HostUnlock({ onUnlocked }: { onUnlocked: () => void }) {
+  const unlock = useServerFn(unlockHost);
+  const [key, setKey] = useState("");
+  const [err, setErr] = useState(false);
+  const [busy, setBusy] = useState(false);
+  return (
+    <main className="bg-stage flex min-h-screen items-center justify-center px-6">
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          const r = await unlock({ data: { key } }).catch(() => ({ ok: false }));
+          setBusy(false);
+          if (r.ok) onUnlocked(); else setErr(true);
+        }}
+        className="w-full max-w-sm space-y-4 rounded-2xl border bg-card p-8"
+      >
+        <KeyRound className="h-8 w-8 text-primary" />
+        <h1 className="text-2xl font-bold">Quiz leiten</h1>
+        <p className="text-sm text-muted-foreground">Gib deinen Host-Schlüssel ein, um die Regie freizuschalten.</p>
+        <input type="password" value={key} onChange={(e) => { setKey(e.target.value); setErr(false); }} placeholder="Host-Schlüssel" autoComplete="current-password" className="w-full rounded-xl border bg-input px-4 py-3 outline-none focus:border-primary" />
+        {err && <p className="text-sm text-destructive">Schlüssel ist nicht korrekt.</p>}
+        <button disabled={busy || !key} className="w-full rounded-xl bg-primary py-3 font-bold text-primary-foreground disabled:opacity-50">{busy ? "Prüfe…" : "Freischalten"}</button>
+      </form>
+    </main>
+  );
+}
+
+function RoomPanel() {
   const q = useQuiz();
+  const open = useServerFn(openRoom);
+  const push = useServerFn(pushRoom);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const winner = q.teams.find((t) => t.id === q.buzzerWinner);
+
+  async function openLive() {
+    if (!q.quiz) return;
+    setErr(null);
+    try {
+      setBusy("Raum wird eröffnet…");
+      const { code } = await open();
+      setBusy("Medien werden hochgeladen…");
+      const remote = await publishQuizAssets(code, q.quiz);
+      await push({ data: { code, quiz: remote } });
+      q.setRoom({ code, role: "host" });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Raum konnte nicht eröffnet werden.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (!q.quiz) return null;
+  if (!q.room) {
+    return (
+      <section className="rounded-2xl border bg-card p-5">
+        <button onClick={openLive} disabled={!!busy} className="w-full rounded-xl bg-accent py-4 text-lg font-extrabold text-accent-foreground disabled:opacity-60">
+          {busy ?? "Live-Raum eröffnen 📡"}
+        </button>
+        {err && <p className="mt-2 text-sm text-destructive">{err}</p>}
+      </section>
+    );
+  }
+  return (
+    <section className="space-y-3 rounded-2xl border-2 border-accent/50 bg-card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Live-Raum</p>
+          <p className="font-mono text-4xl font-extrabold tracking-[0.2em] text-accent">{q.room.code}</p>
+        </div>
+        <div className="space-y-1 text-right text-sm">
+          <a href={`/display?room=${q.room.code}`} target="_blank" rel="noreferrer" className="block text-primary underline">Bühne öffnen: {origin}/display?room={q.room.code}</a>
+          <p className="text-muted-foreground">Mitspieler: {origin}/play?room={q.room.code}</p>
+        </div>
+      </div>
+      <div className={`flex items-center justify-between rounded-xl px-4 py-3 ${winner ? "bg-accent text-accent-foreground" : "bg-secondary"}`}>
+        <span className="text-lg font-bold">{winner ? `🔔 ${winner.name} hat gebuzzert!` : "Buzzer frei"}</span>
+        {q.buzzerWinner && (
+          <button onClick={() => q.room && push({ data: { code: q.room.code, resetBuzzer: true } })} className="rounded-lg bg-background px-3 py-2 text-sm font-bold text-foreground">Buzzer freigeben</button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function AdminControl() {
+  const q = useQuiz();
+  const kick = useServerFn(kickTeam);
+  const rename = useServerFn(renameRoomTeam);
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,6 +146,7 @@ function AdminPage() {
     setError(null);
     setLoading(true);
     try {
+      q.setRoom(null);
       q.setQuiz(await loadQuizPackage(file));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Paket konnte nicht geladen werden.");
@@ -77,6 +179,8 @@ function AdminPage() {
           <p className="font-semibold">{loading ? "Lade Paket…" : q.quiz ? `Geladen: ${q.quiz.sourceFileName} – neues Paket ablegen` : ".quiz- oder .zip-Datei hier ablegen oder klicken"}</p>
           {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
         </div>
+
+        <RoomPanel />
 
         {q.quiz && q.status === "intro" && (
           <section className="space-y-4 rounded-2xl border-2 border-primary/40 bg-card p-8 text-center">
@@ -170,16 +274,17 @@ function AdminPage() {
           <div className="space-y-2">
             {q.teams.map((t) => (
               <div key={t.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-secondary px-3 py-2">
-                <input value={t.name} onChange={(e) => q.renameTeam(t.id, e.target.value)} aria-label="Teamname" className="min-w-0 flex-1 rounded-md bg-background px-2 py-1 font-semibold" />
+                <input value={t.name} onChange={(e) => q.renameTeam(t.id, e.target.value)} onBlur={(e) => q.room && e.target.value.trim() && rename({ data: { code: q.room.code, id: t.id, name: e.target.value.trim() } })} aria-label="Teamname" className="min-w-0 flex-1 rounded-md bg-background px-2 py-1 font-semibold" />
                 <span className="w-12 text-center font-mono text-lg">{t.score}</span>
                 {[-1, 1, 2, 5].map((d) => (
                   <button key={d} onClick={() => q.adjustScore(t.id, d)} className={`h-8 w-10 rounded-md text-sm font-bold ${d < 0 ? "bg-muted" : "bg-primary text-primary-foreground"}`}>{d > 0 ? `+${d}` : d}</button>
                 ))}
-                <button onClick={() => q.removeTeam(t.id)} aria-label="Team löschen" className="rounded-md p-2 text-destructive hover:bg-muted"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => { q.removeTeam(t.id); if (q.room) kick({ data: { code: q.room.code, id: t.id } }); }} aria-label="Team entfernen" className="rounded-md p-2 text-destructive hover:bg-muted"><Trash2 className="h-4 w-4" /></button>
               </div>
             ))}
           </div>
-          <button onClick={() => q.addTeam(`Team ${q.teams.length + 1}`)} className="mt-3 flex items-center gap-1 rounded-lg bg-secondary px-4 py-2 font-semibold hover:bg-muted"><Plus className="h-4 w-4" /> Neues Team</button>
+          {q.room && q.teams.length === 0 && <p className="text-sm text-muted-foreground">Noch keine Teams beigetreten – die Teams erscheinen hier live.</p>}
+          {!q.room && <button onClick={() => q.addTeam(`Team ${q.teams.length + 1}`)} className="mt-3 flex items-center gap-1 rounded-lg bg-secondary px-4 py-2 font-semibold hover:bg-muted"><Plus className="h-4 w-4" /> Neues Team</button>}
         </section>
       </div>
     </main>
