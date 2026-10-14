@@ -189,7 +189,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
       : null;
   });
   const [buzzerWinner, setBuzzerWinner] = useState<string | null>(null);
-  const roomRef = useRef(room);
+  const roomRef = useRef<RoomLink | null>(room);
   roomRef.current = room;
   const channelRef = useRef<BroadcastChannel | null>(null);
   const fromRemote = useRef(false);
