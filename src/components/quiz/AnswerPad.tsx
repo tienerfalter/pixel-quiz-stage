@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { deviationText, fmtValue } from "@/lib/units";
+import { roundPoints } from "@/lib/scoring";
 import type { QuizOption, QuizQuestion } from "@/types/quiz";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -20,16 +21,18 @@ export function needsInput(q: QuizQuestion) {
 }
 
 
-function feedback(q: QuizQuestion, a: PadAnswer): { ok: boolean | null; text: string } {
+function feedback(q: QuizQuestion, a: PadAnswer, auto: boolean): { ok: boolean | null; text: string } {
+  const pts = roundPoints(q, 0, q.type === "clue_ladder" ? 99 : 1);
+  const win = (head: string) => (auto && pts > 0 ? `${head} +${pts} Punkte` : "Richtig gelöst! Der Quizmaster vergibt die Punkte.");
   const opts = choiceOptions(q);
   if (opts) {
     const idx = opts.findIndex((o) => o.isCorrect);
     const ok = idx >= 0 && a.option === LETTERS[idx];
-    return { ok, text: ok ? `Richtig! +${q.points} Punkte` : idx >= 0 ? `Leider falsch – richtig war ${LETTERS[idx]}` : "Ausgewertet" };
+    return { ok, text: ok ? win("Richtig!") : idx >= 0 ? `Leider falsch – richtig war ${LETTERS[idx]}` : "Ausgewertet" };
   }
   if (q.type === "grid_coords") {
     const ok = (q.correctCells ?? []).map((c) => c.toUpperCase()).includes(a.cell ?? "");
-    return { ok, text: ok ? `Volltreffer! +${q.points} Punkte` : `Daneben – Ziel: ${(q.correctCells ?? []).join(", ")}` };
+    return { ok, text: ok ? win("Volltreffer!") : `Daneben – Ziel: ${(q.correctCells ?? []).join(", ")}` };
   }
   if (q.type === "slider" && a.value !== undefined) {
     const diff = Math.abs(a.value - q.correctValue);
@@ -38,8 +41,8 @@ function feedback(q: QuizQuestion, a: PadAnswer): { ok: boolean | null; text: st
   return { ok: null, text: "" };
 }
 
-export function AnswerPad({ question, qIndex, phase, code, teamId }: {
-  question: QuizQuestion; qIndex: number; phase: string; code: string; teamId: string;
+export function AnswerPad({ question, qIndex, phase, code, teamId, autoScoring = true }: {
+  question: QuizQuestion; qIndex: number; phase: string; code: string; teamId: string; autoScoring?: boolean;
 }) {
   const [saved, setSaved] = useState<PadAnswer | null>(null);
   const [draft, setDraft] = useState<PadAnswer>({});
@@ -126,7 +129,7 @@ export function AnswerPad({ question, qIndex, phase, code, teamId }: {
   let status: React.ReactNode = null;
   if (phase === "resolved") {
     if (saved) {
-      const f = feedback(question, saved);
+      const f = feedback(question, saved, autoScoring);
       status = <div className={`rounded-2xl p-4 text-lg font-bold ${f.ok === true ? "bg-success text-success-foreground" : f.ok === false ? "bg-destructive text-destructive-foreground" : "bg-card"}`}>{f.text}</div>;
     } else status = <div className="rounded-2xl bg-card p-4 font-bold">Keine Antwort abgegeben</div>;
   } else if (phase === "locked") {

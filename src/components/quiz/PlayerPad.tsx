@@ -8,7 +8,7 @@ interface RoomRow {
   phase: string;
   current_question_index: number;
   buzzer_winner: string | null;
-  state: { teams?: Team[]; buzzerLocked?: string[] } | null;
+  state: { teams?: Team[]; buzzerLocked?: string[]; autoScoring?: boolean } | null;
   quiz: { meta?: { title?: string }; questions?: QuizQuestion[]; branding?: { mobileBanner?: string } } | null;
 }
 
@@ -144,7 +144,7 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
       </button>
     );
   } else if (question && needsInput(question) && (phase === "guessing" || phase === "locked" || phase === "resolved")) {
-    body = <AnswerPad key={`${row!.current_question_index}`} question={question} qIndex={row!.current_question_index} phase={phase} code={code} teamId={teamId} />;
+    body = <AnswerPad key={`${row!.current_question_index}`} question={question} qIndex={row!.current_question_index} phase={phase} code={code} teamId={teamId} autoScoring={row?.state?.autoScoring !== false} />;
   } else if (phase === "guessing") {
     body = <Info title="Frage läuft" text="Schau auf den Beamer und beratet euch im Team." />;
   } else if (phase === "locked" || phase === "resolved") {
