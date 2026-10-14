@@ -116,7 +116,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     setState((s) => {
       const hidden = Array.from({ length: total }, (_, i) => i).filter((i) => !s.revealedTiles.includes(i));
       if (!hidden.length) return { ...s, mosaicAuto: false };
-      const pick = hidden[Math.floor(Math.random() * hidden.length)];
+      const pick = hidden[Math.floor(Math.random() * hidden.length)]!;
       return { ...s, revealedTiles: [...s.revealedTiles, pick], mosaicAuto: hidden.length > 1 && s.mosaicAuto };
     });
   }, []);
