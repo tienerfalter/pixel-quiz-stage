@@ -6,12 +6,15 @@ import type { QuizQuestion } from "@/types/quiz";
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 export function StageQuestion({ question }: { question: QuizQuestion }) {
+  const { phase } = useQuiz();
+  const resolved = phase === "resolved";
   switch (question.type) {
     case "choice":
       return (
         <div className="mt-10 grid w-full max-w-6xl grid-cols-2 gap-6">
           {question.options.map((o, i) => (
-            <div key={o.id} className="flex items-center gap-5 rounded-2xl border-2 border-primary/40 bg-card/80 px-8 py-6 text-left backdrop-blur">
+            <div key={o.id} className={`flex items-center gap-5 rounded-2xl border-2 px-8 py-6 text-left backdrop-blur transition-all duration-700 ${
+              !resolved ? "border-primary/40 bg-card/80" : o.isCorrect ? "animate-pulse border-success bg-success/30 scale-105" : "border-border bg-card/40 opacity-30"}`}>
               <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary text-3xl font-extrabold text-primary-foreground">{LETTERS[i]}</span>
               <span className="text-4xl font-bold">{o.text}</span>
             </div>
@@ -22,7 +25,15 @@ export function StageQuestion({ question }: { question: QuizQuestion }) {
       const { min, max, unit } = question.sliderConfig;
       return (
         <div className="mt-14 w-full max-w-5xl">
-          <div className="h-4 rounded-full bg-gradient-to-r from-secondary via-primary/70 to-primary" />
+          <div className="relative h-4 rounded-full bg-gradient-to-r from-secondary via-primary/70 to-primary">
+            {resolved && (
+              <div className="absolute -top-16 flex -translate-x-1/2 flex-col items-center animate-in fade-in zoom-in duration-700"
+                style={{ left: `${Math.max(0, Math.min(100, ((question.correctValue - min) / (max - min)) * 100))}%` }}>
+                <span className="rounded-lg bg-success px-3 py-1 font-mono text-2xl font-bold text-success-foreground">{question.correctValue.toLocaleString("de-DE")} {unit}</span>
+                <span className="h-14 w-1.5 rounded-full bg-success" />
+              </div>
+            )}
+          </div>
           <div className="mt-4 flex justify-between font-mono text-4xl font-bold">
             <span>{min.toLocaleString("de-DE")} {unit}</span>
             <span className="text-2xl text-muted-foreground self-center">Schätzt!</span>
@@ -92,7 +103,8 @@ function AudioStage({ src }: { src: string }) {
 }
 
 function ClueLadder({ question }: { question: Extract<QuizQuestion, { type: "clue_ladder" }> }) {
-  const { revealedClues } = useQuiz();
+  const { revealedClues: rc, phase } = useQuiz();
+  const revealedClues = phase === "resolved" ? question.clues.length : rc;
   const pts = question.pointsPerLevel[Math.min(revealedClues, question.pointsPerLevel.length) - 1] ?? question.points;
   return (
     <div className="mt-8 w-full max-w-5xl">
@@ -115,9 +127,10 @@ function ClueLadder({ question }: { question: Extract<QuizQuestion, { type: "clu
 }
 
 function Mosaic({ question }: { question: Extract<QuizQuestion, { type: "mosaic" }> }) {
-  const { revealedTiles } = useQuiz();
+  const { revealedTiles: rt, phase } = useQuiz();
   const { rows, cols } = question.grid;
   const total = rows * cols;
+  const revealedTiles = phase === "resolved" ? Array.from({ length: total }, (_, i) => i) : rt;
   const percent = Math.round((revealedTiles.length / total) * 100);
   const tier = [...question.pointsPerTier].sort((a, b) => a.maxRevealedPercent - b.maxRevealedPercent)
     .find((t) => percent <= t.maxRevealedPercent);
