@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ImageIcon } from "lucide-react";
+import { StageQuestion } from "@/components/quiz/StageQuestion";
 import { useQuiz } from "@/context/QuizContext";
 
 export const Route = createFileRoute("/display")({
@@ -40,13 +40,7 @@ function DisplayPage() {
               Frage {currentQuestionIndex + 1} · {question.title}
             </p>
             <h1 className="mt-6 max-w-6xl text-6xl font-extrabold leading-tight">{question.question}</h1>
-            <div className="mt-10 flex aspect-video w-full max-w-3xl items-center justify-center rounded-2xl border border-dashed bg-card/40">
-              {question.media && question.mediaType !== "audio" ? (
-                <img src={question.media} alt="" className="h-full w-full rounded-2xl object-contain" />
-              ) : (
-                <ImageIcon className="h-12 w-12 text-muted-foreground" />
-              )}
-            </div>
+            <StageQuestion key={question.id} question={question} />
           </>
         )}
       </div>

@@ -2,11 +2,22 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import type { LoadedQuizPackage, RoundStatus, Team } from "@/types/quiz";
 import { revokeQuizPackage } from "@/utils/quizPackageLoader";
 
+export interface AudioState {
+  playing: boolean;
+  volume: number;
+  /** Incremented to trigger "restart from beginning" */
+  restartSeq: number;
+}
+
 interface SyncState {
   quiz: LoadedQuizPackage | null;
   currentQuestionIndex: number;
   roundStatus: RoundStatus;
   teams: Team[];
+  revealedTiles: number[];
+  revealedClues: number;
+  mosaicAuto: boolean;
+  audio: AudioState;
 }
 
 interface QuizContextValue extends SyncState {
@@ -18,6 +29,13 @@ interface QuizContextValue extends SyncState {
   addTeam: (name: string) => void;
   removeTeam: (id: string) => void;
   adjustScore: (id: string, delta: number) => void;
+  revealRandomTile: (total: number) => void;
+  revealAllTiles: (total: number) => void;
+  setMosaicAuto: (on: boolean) => void;
+  revealNextClue: (total: number) => void;
+  revealAllClues: (total: number) => void;
+  setAudio: (patch: Partial<AudioState>) => void;
+  restartAudio: () => void;
 }
 
 const QuizContext = createContext<QuizContextValue | null>(null);
@@ -29,20 +47,28 @@ const DEFAULT_TEAMS: Team[] = [
 
 const CHANNEL = "quiz-sync";
 
+const freshQuestionState = (audio: AudioState) => ({
+  roundStatus: "idle" as RoundStatus,
+  revealedTiles: [] as number[],
+  revealedClues: 1,
+  mosaicAuto: false,
+  audio: { ...audio, playing: false },
+});
+
 /**
  * Global quiz state. Synced between tabs (admin / display / play) of the same
- * browser via BroadcastChannel. Blob URLs stay valid as long as the admin tab
- * that loaded the package is open.
+ * browser via BroadcastChannel.
  */
 export function QuizProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SyncState>({
     quiz: null,
     currentQuestionIndex: 0,
-    roundStatus: "idle",
     teams: DEFAULT_TEAMS,
+    ...freshQuestionState({ playing: false, volume: 0.8, restartSeq: 0 }),
   });
   const channelRef = useRef<BroadcastChannel | null>(null);
   const fromRemote = useRef(false);
+  const stateRef = useRef(state);
 
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") return;
@@ -63,7 +89,6 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     return () => ch.close();
   }, []);
 
-  const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
     if (fromRemote.current) {
@@ -76,14 +101,23 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   const setQuiz = useCallback((quiz: LoadedQuizPackage | null) => {
     setState((s) => {
       if (s.quiz && s.quiz !== quiz) revokeQuizPackage(s.quiz);
-      return { ...s, quiz, currentQuestionIndex: 0, roundStatus: "idle" };
+      return { ...s, quiz, currentQuestionIndex: 0, ...freshQuestionState(s.audio) };
     });
   }, []);
 
   const goToQuestion = useCallback((i: number) => {
     setState((s) => {
       const max = (s.quiz?.questions.length ?? 1) - 1;
-      return { ...s, currentQuestionIndex: Math.max(0, Math.min(max, i)), roundStatus: "idle" };
+      return { ...s, currentQuestionIndex: Math.max(0, Math.min(max, i)), ...freshQuestionState(s.audio) };
+    });
+  }, []);
+
+  const revealRandomTile = useCallback((total: number) => {
+    setState((s) => {
+      const hidden = Array.from({ length: total }, (_, i) => i).filter((i) => !s.revealedTiles.includes(i));
+      if (!hidden.length) return { ...s, mosaicAuto: false };
+      const pick = hidden[Math.floor(Math.random() * hidden.length)];
+      return { ...s, revealedTiles: [...s.revealedTiles, pick], mosaicAuto: hidden.length > 1 && s.mosaicAuto };
     });
   }, []);
 
@@ -102,6 +136,15 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         ...s,
         teams: s.teams.map((t) => (t.id === id ? { ...t, score: t.score + delta } : t)),
       })),
+    revealRandomTile,
+    revealAllTiles: (total) =>
+      setState((s) => ({ ...s, mosaicAuto: false, revealedTiles: Array.from({ length: total }, (_, i) => i) })),
+    setMosaicAuto: (mosaicAuto) => setState((s) => ({ ...s, mosaicAuto })),
+    revealNextClue: (total) => setState((s) => ({ ...s, revealedClues: Math.min(total, s.revealedClues + 1) })),
+    revealAllClues: (total) => setState((s) => ({ ...s, revealedClues: total })),
+    setAudio: (patch) => setState((s) => ({ ...s, audio: { ...s.audio, ...patch } })),
+    restartAudio: () =>
+      setState((s) => ({ ...s, audio: { ...s.audio, playing: true, restartSeq: s.audio.restartSeq + 1 } })),
   };
 
   return <QuizContext.Provider value={value}>{children}</QuizContext.Provider>;
