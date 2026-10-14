@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import type { LoadedQuizPackage, RoundStatus, Team } from "@/types/quiz";
+import type { LoadedQuizPackage, Phase, QuizQuestion, Team } from "@/types/quiz";
 import { revokeQuizPackage } from "@/utils/quizPackageLoader";
 
 export interface AudioState {
@@ -9,15 +9,32 @@ export interface AudioState {
   restartSeq: number;
 }
 
+/** Timer synced via absolute end timestamp so every tab computes the same value. */
+export interface TimerState {
+  enabled: boolean;
+  running: boolean;
+  /** epoch ms when the timer hits zero (only meaningful while running) */
+  endsAt: number | null;
+  /** remaining ms while paused */
+  remainingMs: number;
+}
+
+export interface SfxEvent {
+  kind: "correct" | "wrong";
+  seq: number;
+}
+
 interface SyncState {
   quiz: LoadedQuizPackage | null;
   currentQuestionIndex: number;
-  roundStatus: RoundStatus;
+  phase: Phase;
   teams: Team[];
   revealedTiles: number[];
   revealedClues: number;
   mosaicAuto: boolean;
   audio: AudioState;
+  timer: TimerState;
+  sfx: SfxEvent;
 }
 
 interface QuizContextValue extends SyncState {
@@ -25,7 +42,7 @@ interface QuizContextValue extends SyncState {
   goToQuestion: (i: number) => void;
   nextQuestion: () => void;
   prevQuestion: () => void;
-  setRoundStatus: (s: RoundStatus) => void;
+  setPhase: (p: Phase) => void;
   addTeam: (name: string) => void;
   removeTeam: (id: string) => void;
   adjustScore: (id: string, delta: number) => void;
@@ -36,6 +53,10 @@ interface QuizContextValue extends SyncState {
   revealAllClues: (total: number) => void;
   setAudio: (patch: Partial<AudioState>) => void;
   restartAudio: () => void;
+  toggleTimer: () => void;
+  resetTimer: () => void;
+  addTime: (seconds: number) => void;
+  playSfx: (kind: SfxEvent["kind"]) => void;
 }
 
 const QuizContext = createContext<QuizContextValue | null>(null);
@@ -47,13 +68,26 @@ const DEFAULT_TEAMS: Team[] = [
 
 const CHANNEL = "quiz-sync";
 
-const freshQuestionState = (audio: AudioState) => ({
-  roundStatus: "idle" as RoundStatus,
+function initialTimer(question?: QuizQuestion): TimerState {
+  const t = question?.timing;
+  if (!t?.hasTimer) return { enabled: false, running: false, endsAt: null, remainingMs: 0 };
+  const ms = t.timeLimitSeconds * 1000;
+  return { enabled: true, running: true, endsAt: Date.now() + ms, remainingMs: ms };
+}
+
+const freshQuestionState = (audio: AudioState, question?: QuizQuestion) => ({
+  phase: "guessing" as Phase,
   revealedTiles: [] as number[],
   revealedClues: 1,
   mosaicAuto: false,
   audio: { ...audio, playing: false },
+  timer: initialTimer(question),
 });
+
+export function timerRemainingMs(t: TimerState, now = Date.now()) {
+  if (!t.enabled) return 0;
+  return t.running && t.endsAt ? Math.max(0, t.endsAt - now) : t.remainingMs;
+}
 
 /**
  * Global quiz state. Synced between tabs (admin / display / play) of the same
@@ -64,6 +98,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     quiz: null,
     currentQuestionIndex: 0,
     teams: DEFAULT_TEAMS,
+    sfx: { kind: "correct", seq: 0 },
     ...freshQuestionState({ playing: false, volume: 0.8, restartSeq: 0 }),
   });
   const channelRef = useRef<BroadcastChannel | null>(null);
@@ -101,14 +136,15 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   const setQuiz = useCallback((quiz: LoadedQuizPackage | null) => {
     setState((s) => {
       if (s.quiz && s.quiz !== quiz) revokeQuizPackage(s.quiz);
-      return { ...s, quiz, currentQuestionIndex: 0, ...freshQuestionState(s.audio) };
+      return { ...s, quiz, currentQuestionIndex: 0, ...freshQuestionState(s.audio, quiz?.questions[0]) };
     });
   }, []);
 
   const goToQuestion = useCallback((i: number) => {
     setState((s) => {
       const max = (s.quiz?.questions.length ?? 1) - 1;
-      return { ...s, currentQuestionIndex: Math.max(0, Math.min(max, i)), ...freshQuestionState(s.audio) };
+      const idx = Math.max(0, Math.min(max, i));
+      return { ...s, currentQuestionIndex: idx, ...freshQuestionState(s.audio, s.quiz?.questions[idx]) };
     });
   }, []);
 
@@ -121,13 +157,22 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setPhase = useCallback((phase: Phase) => {
+    setState((s) => {
+      const timer = phase !== "guessing" && s.timer.running
+        ? { ...s.timer, running: false, remainingMs: timerRemainingMs(s.timer), endsAt: null }
+        : s.timer;
+      return { ...s, phase, timer, mosaicAuto: phase === "guessing" ? s.mosaicAuto : false };
+    });
+  }, []);
+
   const value: QuizContextValue = {
     ...state,
     setQuiz,
     goToQuestion,
     nextQuestion: () => goToQuestion(state.currentQuestionIndex + 1),
     prevQuestion: () => goToQuestion(state.currentQuestionIndex - 1),
-    setRoundStatus: (roundStatus) => setState((s) => ({ ...s, roundStatus })),
+    setPhase,
     addTeam: (name) =>
       setState((s) => ({ ...s, teams: [...s.teams, { id: crypto.randomUUID(), name, score: 0 }] })),
     removeTeam: (id) => setState((s) => ({ ...s, teams: s.teams.filter((t) => t.id !== id) })),
@@ -145,6 +190,33 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     setAudio: (patch) => setState((s) => ({ ...s, audio: { ...s.audio, ...patch } })),
     restartAudio: () =>
       setState((s) => ({ ...s, audio: { ...s.audio, playing: true, restartSeq: s.audio.restartSeq + 1 } })),
+    toggleTimer: () =>
+      setState((s) => {
+        if (!s.timer.enabled) return s;
+        if (s.timer.running) {
+          return { ...s, timer: { ...s.timer, running: false, endsAt: null, remainingMs: timerRemainingMs(s.timer) } };
+        }
+        if (s.timer.remainingMs <= 0) return s;
+        return { ...s, phase: "guessing", timer: { ...s.timer, running: true, endsAt: Date.now() + s.timer.remainingMs } };
+      }),
+    resetTimer: () =>
+      setState((s) => {
+        const q = s.quiz?.questions[s.currentQuestionIndex];
+        const t = initialTimer(q);
+        return { ...s, timer: { ...t, running: false, endsAt: null } };
+      }),
+    addTime: (sec) =>
+      setState((s) => {
+        if (!s.timer.enabled) return s;
+        const add = sec * 1000;
+        return {
+          ...s,
+          timer: s.timer.running && s.timer.endsAt
+            ? { ...s.timer, endsAt: s.timer.endsAt + add }
+            : { ...s.timer, remainingMs: s.timer.remainingMs + add },
+        };
+      }),
+    playSfx: (kind) => setState((s) => ({ ...s, sfx: { kind, seq: s.sfx.seq + 1 } })),
   };
 
   return <QuizContext.Provider value={value}>{children}</QuizContext.Provider>;
@@ -154,4 +226,15 @@ export function useQuiz() {
   const ctx = useContext(QuizContext);
   if (!ctx) throw new Error("useQuiz must be used inside QuizProvider");
   return ctx;
+}
+
+/** Re-renders periodically and returns remaining seconds of the synced timer. */
+export function useTimerSeconds(timer: TimerState) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!timer.running) return;
+    const id = setInterval(() => setNow(Date.now()), 200);
+    return () => clearInterval(id);
+  }, [timer.running]);
+  return Math.ceil(timerRemainingMs(timer, now) / 1000);
 }
