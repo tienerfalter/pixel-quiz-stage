@@ -1,3 +1,4 @@
+import { fetchAnswers, fetchRoom, fetchTeams, subscribeRoom } from "@/lib/roomData";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { choiceRanking, isRankBonus, type ChoiceRank, type ScoredAnswer } from "@/lib/scoring";
