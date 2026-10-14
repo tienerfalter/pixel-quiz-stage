@@ -5,6 +5,8 @@ import { hostStatus, kickTeam, openRoom, pushRoom, renameRoomTeam, unlockHost } 
 import { publishQuizAssets } from "@/utils/roomAssets";
 import { Check, ChevronLeft, ChevronRight, KeyRound, Plus, Trash2, Upload, X } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
+import { supabase } from "@/integrations/supabase/client";
+import { needsInput } from "@/components/quiz/AnswerPad";
 import { QuestionControls } from "@/components/quiz/QuestionControls";
 import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";
 import { AdminTimer } from "@/components/quiz/TimerDisplay";
@@ -121,6 +123,7 @@ function RoomPanel() {
           <p className="text-muted-foreground">Mitspieler: {origin}/play?room={q.room.code}</p>
         </div>
       </div>
+      <AnswerCount code={q.room.code} />
       <div className={`flex items-center justify-between rounded-xl px-4 py-3 ${winner ? "bg-accent text-accent-foreground" : "bg-secondary"}`}>
         <span className="text-lg font-bold">{winner ? `🔔 ${winner.name} hat gebuzzert!` : "Buzzer frei"}</span>
         {q.buzzerWinner && (
@@ -128,6 +131,31 @@ function RoomPanel() {
         )}
       </div>
     </section>
+  );
+}
+
+function AnswerCount({ code }: { code: string }) {
+  const q = useQuiz();
+  const idx = q.currentQuestionIndex;
+  const question = q.quiz?.questions[idx];
+  const [count, setCount] = useState(0);
+  const relevant = !!question && q.status === "running" && needsInput(question);
+  useEffect(() => {
+    if (!relevant) return;
+    const load = () => supabase.from("room_answers").select("team_id", { count: "exact", head: true })
+      .eq("room_code", code).eq("question_index", idx).then(({ count: c }) => setCount(c ?? 0));
+    load();
+    const ch = supabase.channel(`answers-${code}-${idx}-${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "room_answers", filter: `room_code=eq.${code}` }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [code, idx, relevant]);
+  if (!relevant) return null;
+  const total = q.teams.length;
+  return (
+    <div className={`rounded-xl px-4 py-3 text-lg font-bold ${total && count >= total ? "bg-success text-success-foreground" : "bg-secondary"}`}>
+      📝 {count}/{total} Teams fertig
+    </div>
   );
 }
 
