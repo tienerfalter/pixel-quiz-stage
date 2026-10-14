@@ -125,9 +125,12 @@ function RoomPanel() {
       </div>
       <AnswerCount code={q.room.code} />
       <div className={`flex items-center justify-between rounded-xl px-4 py-3 ${winner ? "bg-accent text-accent-foreground" : "bg-secondary"}`}>
-        <span className="text-lg font-bold">{winner ? `🔔 ${winner.name} hat gebuzzert!` : "Buzzer frei"}</span>
+        <span className="text-lg font-bold">
+          {winner ? `🔔 ${winner.name} hat gebuzzert!` : "Buzzer frei"}
+          {q.buzzerLocked.length > 0 && <span className="block text-sm font-normal opacity-80">Gesperrt: {q.teams.filter((t) => q.buzzerLocked.includes(t.id)).map((t) => t.name).join(", ")}</span>}
+        </span>
         {q.buzzerWinner && (
-          <button onClick={() => q.room && push({ data: { code: q.room.code, resetBuzzer: true } })} className="rounded-lg bg-background px-3 py-2 text-sm font-bold text-foreground">Buzzer freigeben</button>
+          <button onClick={() => q.buzzerWinner && q.lockOutBuzzer(q.buzzerWinner)} className="rounded-lg bg-background px-3 py-2 text-sm font-bold text-foreground">Buzzer für andere Teams freigeben</button>
         )}
       </div>
     </section>
@@ -148,6 +151,7 @@ function AnswerCount({ code }: { code: string }) {
     if (relevant && autoLock && allIn && phase === "guessing") setPhase("locked");
   }, [relevant, autoLock, allIn, phase, setPhase]);
   useEffect(() => {
+    setCount(0);
     if (!relevant) return;
     const load = () => supabase.from("room_answers").select("team_id", { count: "exact", head: true })
       .eq("room_code", code).eq("question_index", idx).then(({ count: c }) => setCount(c ?? 0));
