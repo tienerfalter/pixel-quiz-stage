@@ -13,13 +13,15 @@ export const Route = createFileRoute("/display")({
       { name: "description", content: "Vollbild-Bühnenansicht des Quiz für Beamer und TV." },
       { property: "og:title", content: "Bühnenanzeige – Quiz Show" },
       { property: "og:description", content: "Vollbild-Bühnenansicht des Quiz für Beamer und TV." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: DisplayPage,
 });
 
 function DisplayPage() {
-  const { quiz, currentQuestionIndex, teams, sfx, nextQuestion } = useQuiz();
+  const { quiz, currentQuestionIndex, teams, sfx, nextQuestion, phase } = useQuiz();
   useEffect(() => {
     if (sfx.seq === 0) return;
     if (sfx.kind === "correct") playCorrectSound();
@@ -27,6 +29,7 @@ function DisplayPage() {
   }, [sfx.seq, sfx.kind]);
   const question = quiz?.questions[currentQuestionIndex];
   const bg = quiz?.branding?.backgroundImage;
+  const compactResolution = phase === "resolved" && question && ["mosaic", "grid_coords", "clue_ladder"].includes(question.type);
 
   return (
     <main
@@ -38,7 +41,7 @@ function DisplayPage() {
         <img src={quiz.branding.cornerLogo} alt="Logo" className="absolute right-8 top-8 h-20 w-auto object-contain" />
       )}
 
-      <div className="flex flex-1 flex-col items-center justify-center px-16 text-center">
+      <div className={`flex min-h-0 flex-1 flex-col items-center justify-center text-center ${compactResolution ? "stage-resolved-content px-8 pb-4 pt-28" : "px-16"}`}>
         {!quiz || !question ? (
           <>
             <p className="text-lg uppercase tracking-[0.4em] text-primary">Gleich geht's los</p>
@@ -49,7 +52,7 @@ function DisplayPage() {
             <p className="text-xl font-semibold uppercase tracking-[0.3em] text-primary">
               Frage {currentQuestionIndex + 1} · {question.title}
             </p>
-            <h1 className="mt-6 max-w-6xl text-6xl font-extrabold leading-tight">{question.question}</h1>
+            <h1 className={`max-w-6xl font-extrabold leading-tight ${compactResolution ? "mt-3 text-4xl" : "mt-6 text-6xl"}`}>{question.question}</h1>
             <QuestionErrorBoundary resetKey={question.id} onSkip={nextQuestion}><StageQuestion key={question.id} question={question} /></QuestionErrorBoundary>
           </>
         )}

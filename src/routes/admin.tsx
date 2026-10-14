@@ -16,6 +16,8 @@ export const Route = createFileRoute("/admin")({
       { name: "description", content: "Quiz-Paket laden, Fragen steuern und Antworten werten." },
       { property: "og:title", content: "Quizmaster Control – Quiz Show" },
       { property: "og:description", content: "Quiz-Paket laden, Fragen steuern und Antworten werten." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: AdminPage,
