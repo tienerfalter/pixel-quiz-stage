@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import type { LoadedQuizPackage, Phase, QuizQuestion, Team } from "@/types/quiz";
+import type { GameStatus, LoadedQuizPackage, Phase, QuizQuestion, Team } from "@/types/quiz";
 import { revokeQuizPackage } from "@/utils/quizPackageLoader";
 
 export interface AudioState {
@@ -28,6 +28,8 @@ interface SyncState {
   quiz: LoadedQuizPackage | null;
   currentQuestionIndex: number;
   phase: Phase;
+  status: GameStatus;
+  showScores: boolean;
   teams: Team[];
   revealedTiles: number[];
   revealedClues: number;
@@ -45,6 +47,10 @@ interface QuizContextValue extends SyncState {
   setPhase: (p: Phase) => void;
   addTeam: (name: string) => void;
   removeTeam: (id: string) => void;
+  renameTeam: (id: string, name: string) => void;
+  startQuiz: () => void;
+  endQuiz: () => void;
+  setShowScores: (on: boolean) => void;
   adjustScore: (id: string, delta: number) => void;
   revealRandomTile: (total: number) => void;
   revealAllTiles: (total: number) => void;
@@ -97,6 +103,8 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SyncState>({
     quiz: null,
     currentQuestionIndex: 0,
+    status: "intro",
+    showScores: true,
     teams: DEFAULT_TEAMS,
     sfx: { kind: "correct", seq: 0 },
     ...freshQuestionState({ playing: false, volume: 0.8, restartSeq: 0 }),
@@ -136,7 +144,8 @@ export function QuizProvider({ children }: { children: ReactNode }) {
   const setQuiz = useCallback((quiz: LoadedQuizPackage | null) => {
     setState((s) => {
       if (s.quiz && s.quiz !== quiz) revokeQuizPackage(s.quiz);
-      return { ...s, quiz, currentQuestionIndex: 0, ...freshQuestionState(s.audio, quiz?.questions[0]) };
+      const fresh = freshQuestionState(s.audio);
+      return { ...s, quiz, currentQuestionIndex: 0, status: "intro", showScores: !quiz?.meta.hideScoresLive, ...fresh };
     });
   }, []);
 
@@ -175,6 +184,11 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     setPhase,
     addTeam: (name) =>
       setState((s) => ({ ...s, teams: [...s.teams, { id: crypto.randomUUID(), name, score: 0 }] })),
+    renameTeam: (id, name) => setState((s) => ({ ...s, teams: s.teams.map((t) => (t.id === id ? { ...t, name } : t)) })),
+    startQuiz: () =>
+      setState((s) => ({ ...s, status: "running", currentQuestionIndex: 0, ...freshQuestionState(s.audio, s.quiz?.questions[0]) })),
+    endQuiz: () => setState((s) => ({ ...s, status: "outro", ...freshQuestionState(s.audio) })),
+    setShowScores: (showScores) => setState((s) => ({ ...s, showScores })),
     removeTeam: (id) => setState((s) => ({ ...s, teams: s.teams.filter((t) => t.id !== id) })),
     adjustScore: (id, delta) =>
       setState((s) => ({

@@ -14,17 +14,16 @@ function fmtNum(v: number, unit?: string) {
 function SolutionBox({ text }: { text?: string | undefined }) {
   if (!text) return null;
   return (
-    <div className="shadow-glow mt-10 rounded-3xl border-4 border-success bg-success/20 px-12 py-8 animate-in fade-in zoom-in duration-700">
-      <p className="text-2xl font-semibold uppercase tracking-[0.3em] text-success">Lösung</p>
-      <p className="mt-2 text-6xl font-extrabold">{text}</p>
+    <div className="shadow-glow relative z-30 mt-10 rounded-3xl border-4 border-success bg-success/20 px-12 py-8 animate-in fade-in zoom-in duration-700">
+      <p className="text-6xl font-extrabold">{text}</p>
     </div>
   );
 }
 
 function SolutionBanner({ notes }: { notes?: QuizQuestion["hostNotes"] }) {
   return (
-    <div className="stage-solution-banner w-full rounded-xl border-2 border-success bg-success/20 px-6 py-3 text-center motion-safe:animate-in motion-safe:fade-in duration-500">
-      <p className="text-3xl font-extrabold leading-tight"><span className="text-success">Lösung: </span>{notes?.solution || ""}</p>
+    <div className="stage-solution-banner relative z-30 w-full rounded-xl border-2 border-success bg-success/20 px-6 py-3 text-center motion-safe:animate-in motion-safe:fade-in duration-500">
+      <p className="text-3xl font-extrabold leading-tight">{notes?.solution || ""}</p>
       {notes?.trivia && <p className="mt-2 text-lg leading-snug text-muted-foreground">{notes.trivia}</p>}
     </div>
   );
