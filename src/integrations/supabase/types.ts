@@ -53,6 +53,48 @@ export type Database = {
         }
         Relationships: []
       }
+      room_answers: {
+        Row: {
+          answer: Json
+          created_at: string
+          id: string
+          question_index: number
+          room_code: string
+          team_id: string
+        }
+        Insert: {
+          answer: Json
+          created_at?: string
+          id?: string
+          question_index: number
+          room_code: string
+          team_id: string
+        }
+        Update: {
+          answer?: Json
+          created_at?: string
+          id?: string
+          question_index?: number
+          room_code?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_answers_room_code_fkey"
+            columns: ["room_code"]
+            isOneToOne: false
+            referencedRelation: "quiz_rooms"
+            referencedColumns: ["room_code"]
+          },
+          {
+            foreignKeyName: "room_answers_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "room_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       room_teams: {
         Row: {
           created_at: string
@@ -89,6 +131,10 @@ export type Database = {
     Functions: {
       join_room: { Args: { _name: string; _room: string }; Returns: string }
       press_buzzer: { Args: { _room: string; _team: string }; Returns: string }
+      submit_answer: {
+        Args: { _answer: Json; _question: number; _room: string; _team: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
