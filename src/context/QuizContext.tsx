@@ -363,7 +363,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     undoScore: (id) =>
       setState((s) => ({
         ...s,
-        teams: s.teams.map((t) => (t.id === id && t.lastDelta ? { ...t, score: t.score - t.lastDelta, lastDelta: undefined } : t)),
+        teams: s.teams.map((t) => (t.id === id && t.lastDelta ? { ...t, score: t.score - t.lastDelta, lastDelta: 0 } : t)),
       })),
     revealRandomTile,
     revealAllTiles: (total) =>
