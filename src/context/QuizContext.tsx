@@ -146,11 +146,12 @@ function initialTimer(question?: QuizQuestion): TimerState {
   const t = question?.timing;
   if (!t?.hasTimer || !t.timeLimitSeconds) return { enabled: false, running: false, endsAt: null, remainingMs: 0 };
   const ms = t.timeLimitSeconds * 1000;
-  return { enabled: true, running: true, endsAt: Date.now() + ms, remainingMs: ms };
+  // Timer wartet, bis der Quizmaster startet (Vorlese-Phase "ready").
+  return { enabled: true, running: false, endsAt: null, remainingMs: ms };
 }
 
 const freshQuestionState = (audio: AudioState, question?: QuizQuestion) => ({
-  phase: "guessing" as Phase,
+  phase: (question?.timing?.hasTimer && question.timing.timeLimitSeconds ? "ready" : "guessing") as Phase,
   revealedTiles: [] as number[],
   revealedClues: 1,
   mosaicAuto: false,
@@ -366,12 +367,19 @@ export function QuizProvider({ children }: { children: ReactNode }) {
       setState((s) => {
         const q = s.quiz?.questions[s.currentQuestionIndex];
         const t = initialTimer(q);
-        return { ...s, timer: { ...t, running: false, endsAt: null } };
+        if (!t.enabled) return s;
+        // Nach Ablauf: zurück in die Ratephase, Timer läuft sofort wieder.
+        if (s.phase === "locked") return { ...s, phase: "guessing", timer: { ...t, running: true, endsAt: Date.now() + t.remainingMs } };
+        return { ...s, timer: t };
       }),
     addTime: (sec) =>
       setState((s) => {
         if (!s.timer.enabled) return s;
         const add = sec * 1000;
+        if (s.phase === "locked") {
+          const rem = timerRemainingMs(s.timer) + add;
+          return { ...s, phase: "guessing", timer: { ...s.timer, running: true, endsAt: Date.now() + rem, remainingMs: rem } };
+        }
         return {
           ...s,
           timer: s.timer.running && s.timer.endsAt

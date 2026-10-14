@@ -11,7 +11,7 @@ import { QuestionControls } from "@/components/quiz/QuestionControls";
 import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";
 import { AdminTimer } from "@/components/quiz/TimerDisplay";
 
-const PHASE_LABEL = { guessing: "Raten", locked: "Gesperrt", resolved: "Aufgelöst" } as const;
+const PHASE_LABEL = { ready: "Vorlesen", guessing: "Raten", locked: "Gesperrt", resolved: "Aufgelöst" } as const;
 import { loadQuizPackage } from "@/utils/quizPackageLoader";
 
 export const Route = createFileRoute("/admin")({
@@ -292,6 +292,9 @@ function AdminControl() {
                   }} className="flex items-center gap-1 rounded-lg bg-destructive px-5 py-3 text-lg font-bold text-destructive-foreground"><X className="h-5 w-5" /> Falsch</button>
                 </div>
               </div>
+              {q.phase === "ready" && (
+                <button onClick={q.toggleTimer} className="shadow-glow w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">▶ Timer starten & Eingaben freigeben</button>
+              )}
               {q.phase === "guessing" && (
                 <button onClick={() => q.setPhase("locked")} className="w-full rounded-xl bg-secondary py-4 text-lg font-bold hover:bg-muted">⏸ Eingaben sperren</button>
               )}
