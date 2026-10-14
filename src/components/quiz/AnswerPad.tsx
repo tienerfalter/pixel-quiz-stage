@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { deviationText, fmtValue } from "@/lib/units";
-import { roundPoints } from "@/lib/scoring";
+import { choiceRanking, isRankBonus, roundPoints, type ChoiceRank, type ScoredAnswer } from "@/lib/scoring";
 import type { QuizOption, QuizQuestion } from "@/types/quiz";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -21,13 +21,16 @@ export function needsInput(q: QuizQuestion) {
 }
 
 
-function feedback(q: QuizQuestion, a: PadAnswer, auto: boolean): { ok: boolean | null; text: string } {
+function feedback(q: QuizQuestion, a: PadAnswer, auto: boolean, mine?: ChoiceRank | null): { ok: boolean | null; text: string } {
   const pts = roundPoints(q, 0, q.type === "clue_ladder" ? 99 : 1);
   const win = (head: string) => (auto && pts > 0 ? `${head} +${pts} Punkte` : "Richtig gelöst! Der Quizmaster vergibt die Punkte.");
   const opts = choiceOptions(q);
   if (opts) {
     const idx = opts.findIndex((o) => o.isCorrect);
     const ok = idx >= 0 && a.option === LETTERS[idx];
+    if (ok && auto && q.type === "choice" && q.scoring && mine) {
+      return { ok, text: isRankBonus(q) ? `Richtig! Platz ${mine.rank} – du erhältst ${mine.points} Punkte!` : `Richtig! +${mine.points} Punkte!` };
+    }
     return { ok, text: ok ? win("Richtig!") : idx >= 0 ? `Leider falsch – richtig war ${LETTERS[idx]}` : "Ausgewertet" };
   }
   if (q.type === "grid_coords") {
@@ -53,6 +56,13 @@ export function AnswerPad({ question, qIndex, phase, code, teamId, autoScoring =
     supabase.from("room_answers").select("answer").eq("team_id", teamId).eq("question_index", qIndex).maybeSingle()
       .then(({ data }) => data && setSaved(data.answer as PadAnswer));
   }, [teamId, qIndex]);
+
+  const [mine, setMine] = useState<ChoiceRank | null>(null);
+  useEffect(() => {
+    if (phase !== "resolved" || question.type !== "choice") return;
+    supabase.from("room_answers").select("team_id,answer,created_at").eq("room_code", code).eq("question_index", qIndex)
+      .then(({ data }) => setMine(choiceRanking(question, (data ?? []) as ScoredAnswer[]).find((r) => r.team_id === teamId) ?? null));
+  }, [phase, question, code, qIndex, teamId]);
 
   const active = phase === "guessing" && !saved;
   const shown = saved ?? draft;
