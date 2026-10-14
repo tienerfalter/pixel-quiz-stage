@@ -1,6 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { GameStatus, LoadedQuizPackage, Phase, QuizQuestion, Team } from "@/types/quiz";
 import { revokeQuizPackage } from "@/utils/quizPackageLoader";
+import { supabase } from "@/integrations/supabase/client";
+import { pushRoom } from "@/lib/room.functions";
+
+export interface RoomLink {
+  code: string;
+  role: "host" | "viewer";
+}
 
 export interface AudioState {
   playing: boolean;
@@ -155,6 +162,10 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     sfx: { kind: "correct", seq: 0 },
     ...freshQuestionState({ playing: false, volume: 0.8, restartSeq: 0 }),
   });
+  const [room, setRoom] = useState<RoomLink | null>(null);
+  const [buzzerWinner, setBuzzerWinner] = useState<string | null>(null);
+  const roomRef = useRef(room);
+  roomRef.current = room;
   const channelRef = useRef<BroadcastChannel | null>(null);
   const fromRemote = useRef(false);
   const stateRef = useRef(state);
@@ -164,6 +175,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     const ch = new BroadcastChannel(CHANNEL);
     channelRef.current = ch;
     ch.onmessage = (e) => {
+      if (roomRef.current?.role === "viewer") return;
       if (e.data?.type === "state") {
         fromRemote.current = true;
         setState(e.data.state);
@@ -184,8 +196,65 @@ export function QuizProvider({ children }: { children: ReactNode }) {
       fromRemote.current = false;
       return;
     }
-    channelRef.current?.postMessage({ type: "state", state });
+    if (roomRef.current?.role !== "viewer") channelRef.current?.postMessage({ type: "state", state });
   }, [state]);
+
+  // Cloud room subscription (host: buzzer + teams, viewer: full state)
+  useEffect(() => {
+    if (!room) return;
+    const { code, role } = room;
+    const apply = (row: { buzzer_winner: string | null; state: unknown; quiz: unknown }) => {
+      setBuzzerWinner(row.buzzer_winner);
+      if (role === "viewer" && row.state) {
+        fromRemote.current = true;
+        setState({ ...(row.state as SyncState), quiz: (row.quiz as LoadedQuizPackage | null) ?? null });
+      }
+    };
+    const refreshTeams = async () => {
+      const { data } = await supabase.from("room_teams").select("id,name").eq("room_code", code).order("created_at");
+      if (!data) return;
+      setState((s) => ({
+        ...s,
+        teams: data.map((r) => s.teams.find((t) => t.id === r.id) ?? { id: r.id, name: r.name, score: 0 }),
+      }));
+    };
+    supabase.from("quiz_rooms").select("buzzer_winner,state,quiz").eq("room_code", code).maybeSingle()
+      .then(({ data }) => data && apply(data));
+    const ch = supabase
+      .channel(`room-${code}-${role}-${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "quiz_rooms", filter: `room_code=eq.${code}` },
+        (p) => p.new && "room_code" in p.new && apply(p.new as never));
+    if (role === "host") {
+      refreshTeams();
+      ch.on("postgres_changes", { event: "*", schema: "public", table: "room_teams" }, () => refreshTeams());
+    }
+    ch.subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [room]);
+
+  // Host pushes state to the cloud room (debounced)
+  const lastKey = useRef("");
+  useEffect(() => {
+    if (room?.role !== "host") return;
+    const id = setTimeout(() => {
+      const s = stateRef.current;
+      const key = `${s.status}-${s.currentQuestionIndex}`;
+      const resetBuzzer = key !== lastKey.current;
+      lastKey.current = key;
+      pushRoom({
+        data: {
+          code: room.code,
+          state: { ...s, quiz: null },
+          resetBuzzer,
+          phase: s.status === "running" ? s.phase : s.status,
+          currentQuestionIndex: s.currentQuestionIndex,
+          timerSecondsLeft: Math.ceil(timerRemainingMs(s.timer) / 1000),
+          scores: Object.fromEntries(s.teams.map((t) => [t.id, t.score])),
+        },
+      }).catch((e) => console.error("Raum-Sync fehlgeschlagen", e));
+    }, 150);
+    return () => clearTimeout(id);
+  }, [state, room]);
 
   const setQuiz = useCallback((quiz: LoadedQuizPackage | null) => {
     setState((s) => {
