@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { QuizQuestion, Team } from "@/types/quiz";
+import { AnswerPad, needsInput } from "./AnswerPad";
 
 interface RoomRow {
   phase: string;
@@ -120,7 +121,7 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
   }
 
   let body;
-  if (phase === "guessing" && question?.type === "buzzer") {
+  if (phase === "guessing" && question && !needsInput(question)) {
     body = winner ? (
       winner === teamId ? (
         <div className="rounded-3xl bg-success p-10 text-center text-success-foreground"><p className="text-5xl font-extrabold">Du bist dran!</p></div>
@@ -132,6 +133,8 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
         BUZZ!
       </button>
     );
+  } else if (question && needsInput(question) && (phase === "guessing" || phase === "locked" || phase === "resolved")) {
+    body = <AnswerPad key={`${row!.current_question_index}`} question={question} qIndex={row!.current_question_index} phase={phase} code={code} teamId={teamId} />;
   } else if (phase === "guessing") {
     body = <Info title="Frage läuft" text="Schau auf den Beamer und beratet euch im Team." />;
   } else if (phase === "locked" || phase === "resolved") {
