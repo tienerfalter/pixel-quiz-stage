@@ -205,7 +205,8 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         fromRemote.current = true;
         setState(e.data.state);
       } else if (e.data?.type === "hello") {
-        ch.postMessage({ type: "state-reply", state: stateRef.current });
+        if (roomRef.current?.role !== "viewer")
+          ch.postMessage({ type: "state-reply", state: stateRef.current });
       } else if (e.data?.type === "state-reply" && !stateRef.current.quiz && e.data.state.quiz) {
         fromRemote.current = true;
         setState(e.data.state);
