@@ -13,7 +13,7 @@ interface RoomRow {
 
 const storeKey = (code: string) => `quiz-team-${code}`;
 
-export function PlayerPad({ initialRoom }: { initialRoom?: string }) {
+export function PlayerPad({ initialRoom }: { initialRoom?: string | undefined }) {
   const [code, setCode] = useState((initialRoom ?? "").toUpperCase());
   const [name, setName] = useState("");
   const [joined, setJoined] = useState<{ code: string; teamId: string } | null>(null);
