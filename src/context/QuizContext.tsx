@@ -281,9 +281,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
 }
 
 export function useQuiz() {
-  const ctx = useContext(QuizContext);
-  if (!ctx) throw new Error("useQuiz must be used inside QuizProvider");
-  return ctx;
+  return useContext(QuizContext) ?? FALLBACK_CONTEXT;
 }
 
 /** Re-renders periodically and returns remaining seconds of the synced timer. */
