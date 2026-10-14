@@ -1,4 +1,4 @@
-import { fetchAnswers, fetchRoom, fetchTeams, subscribeRoom } from "@/lib/roomData";
+import { fetchAnswers, subscribeRoom } from "@/lib/roomData";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -6,7 +6,6 @@ import { hostStatus, kickTeam, openRoom, pushRoom, renameRoomTeam, unlockHost } 
 import { publishQuizAssets } from "@/utils/roomAssets";
 import { Check, ChevronLeft, ChevronRight, KeyRound, Plus, Trash2, Upload, X } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
-import { supabase } from "@/integrations/supabase/client";
 import { needsInput } from "@/components/quiz/AnswerPad";
 import { QuestionControls } from "@/components/quiz/QuestionControls";
 import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";

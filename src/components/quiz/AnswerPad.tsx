@@ -1,4 +1,4 @@
-import { fetchAnswers, fetchRoom, fetchTeams, subscribeRoom } from "@/lib/roomData";
+import { fetchAnswers } from "@/lib/roomData";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { deviationText, fmtValue } from "@/lib/units";

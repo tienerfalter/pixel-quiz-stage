@@ -33,7 +33,7 @@ export function subscribeRoom(code: string, onChange: Listener, pollMs = 3000) {
     const ch = supabase
       .channel(`room:${code}`)
       .on("broadcast", { event: "change" }, (p) => {
-        const table = (p.payload as { table?: string } | undefined)?.table;
+        const table = (p["payload"] as { table?: string } | undefined)?.table;
         listeners.forEach((l) => l(table));
       })
       .subscribe();
