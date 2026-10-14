@@ -61,3 +61,41 @@ export function playWrongSound() {
 export function playTick() {
   tone(1200, 0, 0.06, "triangle", 0.15);
 }
+
+/** Synthesized snare-like drum roll (loops until stopped). Returns a stop function. */
+export function startDrumRoll(): () => void {
+  const c = ac();
+  if (!c) return () => {};
+  const len = c.sampleRate * 0.05;
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const master = c.createGain();
+  master.gain.value = 0.18;
+  master.connect(c.destination);
+  let alive = true;
+  let n = 0;
+  const hit = () => {
+    if (!alive) return;
+    const s = c.createBufferSource();
+    s.buffer = buf;
+    const g = c.createGain();
+    g.gain.value = 0.5 + 0.5 * Math.abs(Math.sin(n++ / 20));
+    s.connect(g).connect(master);
+    s.start();
+  };
+  const id = window.setInterval(hit, 55);
+  return () => { alive = false; window.clearInterval(id); master.disconnect(); };
+}
+
+/** Synthesized victory fanfare. */
+export function playFanfare() {
+  const notes: [number, number, number][] = [
+    [523.25, 0, 0.18], [523.25, 0.2, 0.18], [523.25, 0.4, 0.18], [659.25, 0.6, 0.5],
+    [587.33, 1.15, 0.18], [659.25, 1.35, 0.18], [783.99, 1.55, 1.2],
+  ];
+  for (const [f, t, d] of notes) {
+    tone(f, t, d, "sawtooth", 0.12);
+    tone(f * 2, t, d, "triangle", 0.08);
+  }
+}
