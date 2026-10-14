@@ -205,7 +205,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         fromRemote.current = true;
         setState(e.data.state);
       } else if (e.data?.type === "hello") {
-        ch.postMessage({ type: "state-reply", state: stateRef.current });
+        if (stateRef.current.quiz) ch.postMessage({ type: "state-reply", state: stateRef.current });
       } else if (e.data?.type === "state-reply" && !stateRef.current.quiz && e.data.state.quiz) {
         fromRemote.current = true;
         setState(e.data.state);
@@ -221,7 +221,10 @@ export function QuizProvider({ children }: { children: ReactNode }) {
       fromRemote.current = false;
       return;
     }
-    if (roomRef.current?.role !== "viewer") channelRef.current?.postMessage({ type: "state", state });
+    // Nur das Pult (/admin) darf Zustand an andere Tabs senden — Bühne und
+    // Mitspieler-Tabs (auch mit leerem ?room=) dürfen das Pult nie überschreiben.
+    const isAdminTab = typeof window !== "undefined" && window.location.pathname.startsWith("/admin");
+    if (isAdminTab && roomRef.current?.role !== "viewer") channelRef.current?.postMessage({ type: "state", state });
   }, [state]);
 
   // Cloud room subscription (host: buzzer + teams, viewer: full state)
