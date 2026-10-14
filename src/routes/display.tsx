@@ -21,13 +21,14 @@ export const Route = createFileRoute("/display")({
 });
 
 function DisplayPage() {
-  const { quiz, currentQuestionIndex, teams, sfx, nextQuestion, phase } = useQuiz();
+  const { quiz, currentQuestionIndex, teams, sfx, nextQuestion, phase, status, showScores } = useQuiz();
   useEffect(() => {
     if (sfx.seq === 0) return;
     if (sfx.kind === "correct") playCorrectSound();
     else playWrongSound();
   }, [sfx.seq, sfx.kind]);
-  const question = quiz?.questions[currentQuestionIndex];
+  const question = status === "running" ? quiz?.questions[currentQuestionIndex] : undefined;
+  const winner = teams.length ? teams.reduce((a, b) => (b.score > a.score ? b : a)) : undefined;
   const bg = quiz?.branding?.backgroundImage;
   const compactResolution = phase === "resolved" && question && ["mosaic", "grid_coords", "clue_ladder"].includes(question.type);
 
@@ -42,11 +43,23 @@ function DisplayPage() {
       )}
 
       <div className={`flex min-h-0 flex-1 flex-col items-center justify-center text-center ${compactResolution ? "stage-resolved-content px-8 pb-4 pt-28" : "px-16"}`}>
-        {!quiz || !question ? (
-          <>
-            <p className="text-lg uppercase tracking-[0.4em] text-primary">Gleich geht's los</p>
-            <h1 className="mt-4 text-7xl font-extrabold">{quiz?.meta.title ?? "Die Quiz-Show"}</h1>
-          </>
+        {quiz && status === "outro" ? (
+          <div className="relative z-30 rounded-3xl bg-card/80 px-16 py-12 backdrop-blur animate-in fade-in zoom-in duration-700">
+            <h1 className="text-6xl font-extrabold">{quiz.outro?.title || "Vielen Dank fürs Mitspielen!"}</h1>
+            <p className="mt-4 text-2xl text-muted-foreground">{quiz.outro?.message || "Herzlichen Glückwunsch an die Gewinner!"}</p>
+            {winner && (
+              <div className="mt-10">
+                <p className="text-xl uppercase tracking-[0.3em] text-primary">🏆 Sieger</p>
+                <p className="mt-2 text-7xl font-extrabold text-primary">{winner.name}</p>
+                <p className="mt-2 font-mono text-3xl">{winner.score} Punkte</p>
+              </div>
+            )}
+          </div>
+        ) : !quiz || !question ? (
+          <div className="relative z-30">
+            <h1 className="text-7xl font-extrabold">{quiz?.meta.title ?? "Die Quiz-Show"}</h1>
+            <p className="mt-6 text-2xl uppercase tracking-[0.4em] text-primary">Willkommen zum Quiz</p>
+          </div>
         ) : (
           <>
             <p className="text-xl font-semibold uppercase tracking-[0.3em] text-primary">
@@ -58,8 +71,9 @@ function DisplayPage() {
         )}
       </div>
 
-      {quiz && !quiz.meta.hideScoresLive && (
-        <footer className="flex justify-center gap-6 pb-8">
+      {status === "outro" && <Confetti />}
+      {quiz && showScores && (
+        <footer className="relative z-10 flex justify-center gap-6 pb-8">
           {teams.map((t) => (
             <div key={t.id} className="rounded-xl bg-card/80 px-6 py-3 text-center backdrop-blur">
               <p className="text-sm text-muted-foreground">{t.name}</p>
@@ -69,5 +83,26 @@ function DisplayPage() {
         </footer>
       )}
     </main>
+  );
+}
+
+const CONFETTI_COLORS = ["var(--primary)", "var(--success)", "var(--destructive)", "var(--accent)"];
+
+function Confetti() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden" aria-hidden>
+      {Array.from({ length: 60 }, (_, i) => (
+        <span
+          key={i}
+          className="confetti-piece"
+          style={{
+            left: `${(i * 37) % 100}%`,
+            background: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+            animationDelay: `${(i % 12) * 0.4}s`,
+            animationDuration: `${4 + (i % 5)}s`,
+          }}
+        />
+      ))}
+    </div>
   );
 }

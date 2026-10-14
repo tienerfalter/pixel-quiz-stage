@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Upload, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Plus, Trash2, Upload, X } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
 import { QuestionControls } from "@/components/quiz/QuestionControls";
 import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";
@@ -78,7 +78,24 @@ function AdminPage() {
           {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
         </div>
 
-        {q.quiz && question && (
+        {q.quiz && q.status === "intro" && (
+          <section className="space-y-4 rounded-2xl border-2 border-primary/40 bg-card p-8 text-center">
+            <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Bereit · {total} Fragen</p>
+            <h2 className="text-3xl font-extrabold">{q.quiz.meta.title}</h2>
+            <p className="text-muted-foreground">Der Beamer zeigt den Willkommensbildschirm.</p>
+            <button onClick={q.startQuiz} className="shadow-glow w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">Quiz jetzt starten ▶</button>
+          </section>
+        )}
+
+        {q.quiz && q.status === "outro" && (
+          <section className="space-y-4 rounded-2xl border-2 border-primary/40 bg-card p-8 text-center">
+            <h2 className="text-3xl font-extrabold">Siegerehrung läuft 🏆</h2>
+            <p className="text-muted-foreground">Der Beamer zeigt den Abschlussbildschirm.</p>
+            <button onClick={() => q.goToQuestion(total - 1)} className="rounded-xl bg-secondary px-5 py-3 font-bold">← Zurück zur letzten Frage</button>
+          </section>
+        )}
+
+        {q.quiz && question && q.status === "running" && (
           <>
             <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card p-5">
               <div>
@@ -123,8 +140,8 @@ function AdminPage() {
                 <button onClick={() => q.setPhase("resolved")} className="shadow-glow w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">Lösung auf Beamer enthüllen ▶</button>
               )}
               {q.phase === "resolved" && (
-                <button onClick={q.nextQuestion} disabled={q.currentQuestionIndex >= total - 1} className="w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground disabled:opacity-40">
-                  {q.currentQuestionIndex >= total - 1 ? "Letzte Frage erreicht" : "Nächste Frage ▶"}
+                <button onClick={q.currentQuestionIndex >= total - 1 ? q.endQuiz : q.nextQuestion} className="w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">
+                  {q.currentQuestionIndex >= total - 1 ? "Quiz beenden & Siegerehrung ▶" : "Nächste Frage ▶"}
                 </button>
               )}
             </section>
@@ -132,19 +149,26 @@ function AdminPage() {
         )}
 
         <section className="rounded-2xl border bg-card p-5">
-          <h3 className="mb-3 font-bold">Teams</h3>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <h3 className="font-bold">Teams</h3>
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <span>Punktestand auf Beamer anzeigen:</span>
+              <button onClick={() => q.setShowScores(!q.showScores)} className={`rounded-full px-3 py-1 font-bold ${q.showScores ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}`}>{q.showScores ? "An" : "Aus"}</button>
+            </label>
+          </div>
+          <div className="space-y-2">
             {q.teams.map((t) => (
-              <div key={t.id} className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3">
-                <span className="font-semibold">{t.name}</span>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => q.adjustScore(t.id, -(question?.penaltyPoints ?? 1))} className="h-8 w-8 rounded-md bg-muted">−</button>
-                  <span className="w-12 text-center font-mono text-lg">{t.score}</span>
-                  <button onClick={() => q.adjustScore(t.id, question?.points ?? 1)} className="h-8 w-8 rounded-md bg-primary text-primary-foreground">+</button>
-                </div>
+              <div key={t.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-secondary px-3 py-2">
+                <input value={t.name} onChange={(e) => q.renameTeam(t.id, e.target.value)} aria-label="Teamname" className="min-w-0 flex-1 rounded-md bg-background px-2 py-1 font-semibold" />
+                <span className="w-12 text-center font-mono text-lg">{t.score}</span>
+                {[-1, 1, 2, 5].map((d) => (
+                  <button key={d} onClick={() => q.adjustScore(t.id, d)} className={`h-8 w-10 rounded-md text-sm font-bold ${d < 0 ? "bg-muted" : "bg-primary text-primary-foreground"}`}>{d > 0 ? `+${d}` : d}</button>
+                ))}
+                <button onClick={() => q.removeTeam(t.id)} aria-label="Team löschen" className="rounded-md p-2 text-destructive hover:bg-muted"><Trash2 className="h-4 w-4" /></button>
               </div>
             ))}
           </div>
+          <button onClick={() => q.addTeam(`Team ${q.teams.length + 1}`)} className="mt-3 flex items-center gap-1 rounded-lg bg-secondary px-4 py-2 font-semibold hover:bg-muted"><Plus className="h-4 w-4" /> Neues Team</button>
         </section>
       </div>
     </main>

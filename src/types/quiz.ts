@@ -98,6 +98,7 @@ export interface QuizPackage {
   meta: QuizMeta;
   branding?: QuizBranding;
   questions: QuizQuestion[];
+  outro?: { title?: string; message?: string };
 }
 
 export interface LoadedQuizPackage extends QuizPackage {
@@ -108,6 +109,7 @@ export interface LoadedQuizPackage extends QuizPackage {
 
 export type RoundStatus = "guessing" | "locked" | "resolved";
 export type Phase = RoundStatus;
+export type GameStatus = "intro" | "running" | "outro";
 
 export interface Team {
   id: string;
