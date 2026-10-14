@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ImageIcon, Lock, Volume2 } from "lucide-react";
+import { Lock, Volume2 } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
 import type { QuizQuestion } from "@/types/quiz";
 
@@ -84,14 +84,9 @@ export function StageQuestion({ question }: { question: QuizQuestion }) {
 
 function DefaultMedia({ question }: { question: QuizQuestion }) {
   if (question.mediaType === "audio" && question.media) return <AudioStage src={question.media} />;
+  if (!question.media) return null;
   return (
-    <div className="mt-10 flex aspect-video w-full max-w-3xl items-center justify-center rounded-2xl border border-dashed bg-card/40">
-      {question.media ? (
-        <img src={question.media} alt="" className="h-full w-full rounded-2xl object-contain" />
-      ) : (
-        <ImageIcon className="h-12 w-12 text-muted-foreground" />
-      )}
-    </div>
+    <img src={question.media} alt="" className="mt-10 max-h-[55vh] w-auto max-w-3xl rounded-2xl object-contain" />
   );
 }
 

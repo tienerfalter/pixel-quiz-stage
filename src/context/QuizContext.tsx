@@ -67,6 +67,50 @@ interface QuizContextValue extends SyncState {
 
 const QuizContext = createContext<QuizContextValue | null>(null);
 
+/**
+ * Fallback used when a stale hot-reloaded module reads a different context
+ * instance than the mounted provider. No-op setters keep the UI alive until
+ * the next full page load restores the real provider.
+ */
+const noop = () => {};
+const FALLBACK_CONTEXT: QuizContextValue = {
+  quiz: null,
+  currentQuestionIndex: 0,
+  phase: "guessing",
+  status: "intro",
+  showScores: true,
+  teams: [],
+  revealedTiles: [],
+  revealedClues: 1,
+  mosaicAuto: false,
+  audio: { playing: false, volume: 0.8, restartSeq: 0 },
+  timer: { enabled: false, running: false, endsAt: null, remainingMs: 0 },
+  sfx: { kind: "correct", seq: 0 },
+  setQuiz: noop,
+  goToQuestion: noop,
+  nextQuestion: noop,
+  prevQuestion: noop,
+  setPhase: noop,
+  addTeam: noop,
+  removeTeam: noop,
+  renameTeam: noop,
+  startQuiz: noop,
+  endQuiz: noop,
+  setShowScores: noop,
+  adjustScore: noop,
+  revealRandomTile: noop,
+  revealAllTiles: noop,
+  setMosaicAuto: noop,
+  revealNextClue: noop,
+  revealAllClues: noop,
+  setAudio: noop,
+  restartAudio: noop,
+  toggleTimer: noop,
+  resetTimer: noop,
+  addTime: noop,
+  playSfx: noop,
+};
+
 const DEFAULT_TEAMS: Team[] = [
   { id: "t1", name: "Team Rot", score: 0 },
   { id: "t2", name: "Team Blau", score: 0 },
@@ -237,9 +281,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
 }
 
 export function useQuiz() {
-  const ctx = useContext(QuizContext);
-  if (!ctx) throw new Error("useQuiz must be used inside QuizProvider");
-  return ctx;
+  return useContext(QuizContext) ?? FALLBACK_CONTEXT;
 }
 
 /** Re-renders periodically and returns remaining seconds of the synced timer. */

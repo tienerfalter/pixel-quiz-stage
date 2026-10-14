@@ -94,9 +94,17 @@ export interface QuizBranding {
   mobileBanner?: string;
 }
 
+export interface QuizIntro {
+  title: string;
+  subtitle?: string;
+  image?: string;
+  showQrCode?: boolean;
+}
+
 export interface QuizPackage {
   meta: QuizMeta;
   branding?: QuizBranding;
+  intro?: QuizIntro;
   questions: QuizQuestion[];
   outro?: { title?: string; message?: string };
 }
