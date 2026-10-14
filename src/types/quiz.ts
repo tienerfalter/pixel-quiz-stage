@@ -33,7 +33,11 @@ export interface BuzzerQuestion extends BaseQuestion {
 export interface ChoiceQuestion extends BaseQuestion {
   type: "choice";
   options: QuizOption[];
+  /** @deprecated use scoring */
   scoringMode?: "fixed_points" | "speed_bonus";
+  scoring?:
+    | { mode: "fixed"; points: number }
+    | { mode: "rank_bonus"; pointsByRank: number[]; fallbackPoints?: number };
 }
 
 export interface SliderQuestion extends BaseQuestion {

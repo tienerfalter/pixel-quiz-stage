@@ -18,20 +18,34 @@ export function roundPoints(q: QuizQuestion, revealedTiles = 0, revealedClues = 
   return q.points ?? 0;
 }
 
+export type ChoiceRank = { team_id: string; rank: number; points: number };
+
+/** Correct choice answers ordered by submission time, with rank and integer points. */
+export function choiceRanking(q: QuizQuestion, answers: ScoredAnswer[], revealedClues = 1): ChoiceRank[] {
+  const opts = q.type === "choice" || (q.type === "clue_ladder" && q.inputMode === "choice") ? q.options ?? [] : [];
+  const idx = opts.findIndex((o) => o.isCorrect);
+  if (idx < 0) return [];
+  const correct = [...answers].sort((a, b) => a.created_at.localeCompare(b.created_at)).filter((a) => a.answer.option === LETTERS[idx]);
+  const sc = q.type === "choice" ? q.scoring : undefined;
+  return correct.map((a, i) => {
+    let points: number;
+    if (sc?.mode === "rank_bonus") points = sc.pointsByRank?.[i] ?? sc.fallbackPoints ?? 1;
+    else if (sc?.mode === "fixed") points = sc.points;
+    else if (q.type === "choice" && q.scoringMode === "speed_bonus") points = (q.points ?? 0) + correct.length - i - 1;
+    else points = roundPoints(q, 0, revealedClues);
+    return { team_id: a.team_id, rank: i + 1, points: Math.round(points) };
+  });
+}
+
+export const isRankBonus = (q: QuizQuestion) => q.type === "choice" && q.scoring?.mode === "rank_bonus";
+
 /** Computes point awards per team for answer-based questions at resolution time. */
 export function computeAwards(q: QuizQuestion, answers: ScoredAnswer[], revealedClues = 1): Record<string, number> {
   const out: Record<string, number> = {};
   const sorted = [...answers].sort((a, b) => a.created_at.localeCompare(b.created_at));
   const opts = q.type === "choice" || (q.type === "clue_ladder" && q.inputMode === "choice") ? q.options ?? [] : null;
   if (opts) {
-    const idx = opts.findIndex((o) => o.isCorrect);
-    const correct = sorted.filter((a) => idx >= 0 && a.answer.option === LETTERS[idx]);
-    const pts = roundPoints(q, 0, revealedClues);
-    correct.forEach((a, rank) => {
-      // Speed bonus: each later correct team adds one bonus point to the faster ones.
-      const bonus = q.type === "choice" && q.scoringMode === "speed_bonus" ? correct.length - rank - 1 : 0;
-      out[a.team_id] = pts + bonus;
-    });
+    choiceRanking(q, answers, revealedClues).forEach((r) => { out[r.team_id] = r.points; });
   } else if (q.type === "grid_coords") {
     const cells = (q.correctCells ?? []).map((c) => c.toUpperCase());
     sorted.forEach((a) => { if (cells.includes((a.answer.cell ?? "").toUpperCase())) out[a.team_id] = q.points ?? 0; });
