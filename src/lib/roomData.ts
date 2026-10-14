@@ -23,11 +23,30 @@ export async function fetchAnswers(code: string, question: number) {
  * Calls `onChange` whenever something in the room changes (DB trigger broadcasts on
  * topic room:<CODE>), plus a slow polling fallback. Returns an unsubscribe fn.
  */
-export function subscribeRoom(code: string, onChange: (table?: string) => void, pollMs = 3000) {
-  const ch = supabase
-    .channel(`room:${code}`, { config: { broadcast: { self: false } } })
-    .on("broadcast", { event: "change" }, (p) => onChange((p.payload as { table?: string } | undefined)?.table))
-    .subscribe();
+type Listener = (table?: string) => void;
+const shared = new Map<string, { ch: ReturnType<typeof supabase.channel>; listeners: Set<Listener> }>();
+
+export function subscribeRoom(code: string, onChange: Listener, pollMs = 3000) {
+  let entry = shared.get(code);
+  if (!entry) {
+    const listeners = new Set<Listener>();
+    const ch = supabase
+      .channel(`room:${code}`)
+      .on("broadcast", { event: "change" }, (p) => {
+        const table = (p.payload as { table?: string } | undefined)?.table;
+        listeners.forEach((l) => l(table));
+      })
+      .subscribe();
+    entry = { ch, listeners };
+    shared.set(code, entry);
+  }
+  entry.listeners.add(onChange);
   const id = setInterval(() => onChange(), pollMs);
-  return () => { clearInterval(id); supabase.removeChannel(ch); };
+  return () => {
+    clearInterval(id);
+    const e = shared.get(code);
+    if (!e) return;
+    e.listeners.delete(onChange);
+    if (!e.listeners.size) { supabase.removeChannel(e.ch); shared.delete(code); }
+  };
 }
