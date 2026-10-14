@@ -154,13 +154,9 @@ function AnswerCount({ code }: { code: string }) {
   useEffect(() => {
     setCount(0);
     if (!relevant) return;
-    const load = () => supabase.from("room_answers").select("team_id", { count: "exact", head: true })
-      .eq("room_code", code).eq("question_index", idx).then(({ count: c }) => setCount(c ?? 0));
+    const load = () => fetchAnswers(code, idx).then((rows) => setCount(rows.length));
     load();
-    const ch = supabase.channel(`answers-${code}-${idx}-${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "room_answers", filter: `room_code=eq.${code}` }, load)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return subscribeRoom(code, (table) => { if (!table || table === "room_answers") load(); });
   }, [code, idx, relevant]);
   if (!relevant) return null;
   return (
@@ -205,9 +201,8 @@ function AdminControl() {
   async function resolve() {
     q.setPhase("resolved");
     if (!q.autoScoring || !q.room || !question || !needsInput(question)) return;
-    const { data } = await supabase.from("room_answers").select("team_id,answer,created_at")
-      .eq("room_code", q.room.code).eq("question_index", q.currentQuestionIndex);
-    const awards = computeAwards(question, (data ?? []) as ScoredAnswer[], q.revealedClues);
+    const data = await fetchAnswers(q.room.code, q.currentQuestionIndex);
+    const awards = computeAwards(question, data as ScoredAnswer[], q.revealedClues);
     bookOnce(`${qKey}-resolve`, () => Object.entries(awards).forEach(([id, p]) => q.adjustScore(id, p)));
   }
 

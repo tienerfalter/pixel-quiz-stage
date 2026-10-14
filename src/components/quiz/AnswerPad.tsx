@@ -54,15 +54,15 @@ export function AnswerPad({ question, qIndex, phase, code, teamId, autoScoring =
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.from("room_answers").select("answer").eq("team_id", teamId).eq("question_index", qIndex).maybeSingle()
-      .then(({ data }) => data && setSaved(data.answer as PadAnswer));
-  }, [teamId, qIndex]);
+    fetchAnswers(code, qIndex)
+      .then((rows) => { const r = rows.find((x) => x.team_id === teamId); if (r) setSaved(r.answer as PadAnswer); });
+  }, [code, teamId, qIndex]);
 
   const [mine, setMine] = useState<ChoiceRank | null>(null);
   useEffect(() => {
     if (phase !== "resolved" || question.type !== "choice" && question.type !== "grid_coords") return;
-    supabase.from("room_answers").select("team_id,answer,created_at").eq("room_code", code).eq("question_index", qIndex)
-      .then(({ data }) => setMine(choiceRanking(question, (data ?? []) as ScoredAnswer[]).find((r) => r.team_id === teamId) ?? null));
+    fetchAnswers(code, qIndex)
+      .then((data) => setMine(choiceRanking(question, data as ScoredAnswer[]).find((r) => r.team_id === teamId) ?? null));
   }, [phase, question, code, qIndex, teamId]);
 
   const active = phase === "guessing" && !saved;
