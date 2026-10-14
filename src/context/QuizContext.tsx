@@ -153,7 +153,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     setState((s) => {
       const max = (s.quiz?.questions.length ?? 1) - 1;
       const idx = Math.max(0, Math.min(max, i));
-      return { ...s, currentQuestionIndex: idx, ...freshQuestionState(s.audio, s.quiz?.questions[idx]) };
+      return { ...s, status: "running", currentQuestionIndex: idx, ...freshQuestionState(s.audio, s.quiz?.questions[idx]) };
     });
   }, []);
 
