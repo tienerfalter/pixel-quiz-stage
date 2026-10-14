@@ -1,4 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { choiceRanking, isRankBonus, type ChoiceRank, type ScoredAnswer } from "@/lib/scoring";
 import { Lock, Volume2 } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
 import type { QuizQuestion } from "@/types/quiz";
@@ -25,13 +27,34 @@ function SolutionBanner({ notes }: { notes?: QuizQuestion["hostNotes"] }) {
   );
 }
 
+function RankList({ question }: { question: QuizQuestion }) {
+  const { room, currentQuestionIndex, teams } = useQuiz();
+  const [ranks, setRanks] = useState<ChoiceRank[]>([]);
+  useEffect(() => {
+    if (!room) return;
+    supabase.from("room_answers").select("team_id,answer,created_at").eq("room_code", room.code).eq("question_index", currentQuestionIndex)
+      .then(({ data }) => setRanks(choiceRanking(question, (data ?? []) as ScoredAnswer[])));
+  }, [room, currentQuestionIndex, question]);
+  if (!ranks.length) return null;
+  return (
+    <div className="relative z-30 mt-6 flex flex-wrap justify-center gap-3 motion-safe:animate-in motion-safe:fade-in duration-700">
+      {ranks.map((r) => (
+        <span key={r.team_id} className="rounded-xl border-2 border-success bg-success/20 px-4 py-2 text-2xl font-bold">
+          {teams.find((t) => t.id === r.team_id)?.name ?? "Team"}: {r.rank}. Platz (+{r.points} Pkt)
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function StageQuestion({ question }: { question: QuizQuestion }) {
   const { phase } = useQuiz();
   const resolved = phase === "resolved";
   switch (question.type) {
     case "choice":
       return (
-        <div className="mt-10 grid w-full max-w-6xl grid-cols-2 gap-6">
+        <div className="flex w-full max-w-6xl flex-col items-center">
+        <div className="mt-10 grid w-full grid-cols-2 gap-6">
           {question.options.map((o, i) => (
             <div key={o.id} className={`flex items-center gap-5 rounded-2xl border-2 px-8 py-6 text-left backdrop-blur transition-all duration-700 ${
               !resolved ? "border-primary/40 bg-card/80" : o.isCorrect ? "animate-pulse border-success bg-success/30 scale-105" : "border-border bg-card/40 opacity-30"}`}>
@@ -39,6 +62,8 @@ export function StageQuestion({ question }: { question: QuizQuestion }) {
               <span className="text-4xl font-bold">{o.text}</span>
             </div>
           ))}
+        </div>
+        {resolved && isRankBonus(question) && <RankList question={question} />}
         </div>
       );
     case "slider": {
