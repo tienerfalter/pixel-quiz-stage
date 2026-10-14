@@ -70,7 +70,7 @@ const CHANNEL = "quiz-sync";
 
 function initialTimer(question?: QuizQuestion): TimerState {
   const t = question?.timing;
-  if (!t?.hasTimer) return { enabled: false, running: false, endsAt: null, remainingMs: 0 };
+  if (!t?.hasTimer || !t.timeLimitSeconds) return { enabled: false, running: false, endsAt: null, remainingMs: 0 };
   const ms = t.timeLimitSeconds * 1000;
   return { enabled: true, running: true, endsAt: Date.now() + ms, remainingMs: ms };
 }

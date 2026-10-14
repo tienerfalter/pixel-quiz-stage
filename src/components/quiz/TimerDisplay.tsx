@@ -8,7 +8,7 @@ const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${Str
 export function StageTimer() {
   const { timer, quiz, currentQuestionIndex } = useQuiz();
   const secs = useTimerSeconds(timer);
-  const total = quiz?.questions[currentQuestionIndex]?.timing.timeLimitSeconds ?? 1;
+  const total = quiz?.questions[currentQuestionIndex]?.timing?.timeLimitSeconds || 1;
   const last = useRef(secs);
   const warn = timer.enabled && secs <= 5 && secs > 0;
 

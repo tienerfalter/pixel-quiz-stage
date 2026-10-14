@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Upload, X } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
 import { QuestionControls } from "@/components/quiz/QuestionControls";
+import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";
 import { AdminTimer } from "@/components/quiz/TimerDisplay";
 
 const PHASE_LABEL = { guessing: "Raten", locked: "Gesperrt", resolved: "Aufgelöst" } as const;
@@ -102,7 +103,7 @@ function AdminPage() {
                   {question.hostNotes.trivia && <p className="mt-1 text-muted-foreground"><span className="font-semibold">Trivia:</span> {question.hostNotes.trivia}</p>}
                 </div>
               )}
-              <QuestionControls key={question.id} question={question} />
+              <QuestionErrorBoundary resetKey={question.id} onSkip={q.nextQuestion}><QuestionControls key={question.id} question={question} /></QuestionErrorBoundary>
             </section>
 
             <section className="space-y-4 rounded-2xl border-2 border-primary/40 bg-card p-5">
