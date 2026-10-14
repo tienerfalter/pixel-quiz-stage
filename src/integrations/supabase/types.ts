@@ -129,6 +129,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_room: {
+        Args: { _room: string }
+        Returns: {
+          buzzer_winner: string
+          current_question_index: number
+          phase: string
+          quiz: Json
+          room_code: string
+          state: Json
+        }[]
+      }
+      get_room_answers: {
+        Args: { _question: number; _room: string }
+        Returns: {
+          answer: Json
+          created_at: string
+          team_id: string
+        }[]
+      }
+      get_room_teams: {
+        Args: { _room: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       join_room: { Args: { _name: string; _room: string }; Returns: string }
       press_buzzer: { Args: { _room: string; _team: string }; Returns: string }
       submit_answer: {

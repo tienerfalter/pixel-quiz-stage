@@ -1,5 +1,5 @@
+import { fetchAnswers } from "@/lib/roomData";
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { choiceRanking, isRankBonus, type ChoiceRank, type ScoredAnswer } from "@/lib/scoring";
 import { Lock, Volume2 } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
@@ -32,8 +32,8 @@ function RankList({ question }: { question: QuizQuestion }) {
   const [ranks, setRanks] = useState<ChoiceRank[]>([]);
   useEffect(() => {
     if (!room) return;
-    supabase.from("room_answers").select("team_id,answer,created_at").eq("room_code", room.code).eq("question_index", currentQuestionIndex)
-      .then(({ data }) => setRanks(choiceRanking(question, (data ?? []) as ScoredAnswer[])));
+    fetchAnswers(room.code, currentQuestionIndex)
+      .then((data) => setRanks(choiceRanking(question, data as ScoredAnswer[])));
   }, [room, currentQuestionIndex, question]);
   if (!ranks.length) return null;
   return (

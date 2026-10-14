@@ -1,3 +1,4 @@
+import { fetchRoom, fetchTeams, subscribeRoom } from "@/lib/roomData";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,20 +37,17 @@ export function PlayerPad({ initialRoom }: { initialRoom?: string | undefined })
     if (!joined) return;
     const { code: c, teamId } = joined;
     const loadTeam = async () => {
-      const { data } = await supabase.from("room_teams").select("name").eq("id", teamId).maybeSingle();
-      if (data) setTeamName(data.name);
+      const team = (await fetchTeams(c)).find((t) => t.id === teamId);
+      if (team) setTeamName(team.name);
       else setKicked(true);
     };
+    const loadRoom = () => fetchRoom(c).then((data) => data && setRow(data as unknown as RoomRow));
     loadTeam();
-    supabase.from("quiz_rooms").select("phase,current_question_index,buzzer_winner,state,quiz").eq("room_code", c).maybeSingle()
-      .then(({ data }) => data && setRow(data as RoomRow));
-    const ch = supabase
-      .channel(`play-${c}-${teamId}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "quiz_rooms", filter: `room_code=eq.${c}` },
-        (p) => setRow(p.new as RoomRow))
-      .on("postgres_changes", { event: "*", schema: "public", table: "room_teams" }, () => loadTeam())
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    loadRoom();
+    return subscribeRoom(c, (table) => {
+      if (!table || table === "quiz_rooms") loadRoom();
+      if (!table || table === "room_teams") loadTeam();
+    }, 2000);
   }, [joined]);
 
   async function join(e: React.FormEvent) {
