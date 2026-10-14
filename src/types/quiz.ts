@@ -74,6 +74,7 @@ export interface GridCoordsQuestion extends BaseQuestion {
   grid: { rows: number; cols: number };
   correctCells: string[];
   points: number;
+  scoring?: { mode: "fixed"; points: number } | { mode: "rank_bonus"; pointsByRank: number[]; fallbackPoints?: number };
 }
 
 export type QuizQuestion =
@@ -132,4 +133,6 @@ export interface Team {
   id: string;
   name: string;
   score: number;
+  /** Last booked score change (for undo) */
+  lastDelta?: number;
 }

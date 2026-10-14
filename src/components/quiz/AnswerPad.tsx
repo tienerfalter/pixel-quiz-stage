@@ -35,6 +35,7 @@ function feedback(q: QuizQuestion, a: PadAnswer, auto: boolean, mine?: ChoiceRan
   }
   if (q.type === "grid_coords") {
     const ok = (q.correctCells ?? []).map((c) => c.toUpperCase()).includes(a.cell ?? "");
+    if (ok && auto && q.scoring && mine) return { ok, text: isRankBonus(q) ? `Volltreffer! Platz ${mine.rank} – du erhältst ${mine.points} Punkte!` : `Volltreffer! +${mine.points} Punkte!` };
     return { ok, text: ok ? win("Volltreffer!") : `Daneben – Ziel: ${(q.correctCells ?? []).join(", ")}` };
   }
   if (q.type === "slider" && a.value !== undefined) {
@@ -59,7 +60,7 @@ export function AnswerPad({ question, qIndex, phase, code, teamId, autoScoring =
 
   const [mine, setMine] = useState<ChoiceRank | null>(null);
   useEffect(() => {
-    if (phase !== "resolved" || question.type !== "choice") return;
+    if (phase !== "resolved" || question.type !== "choice" && question.type !== "grid_coords") return;
     supabase.from("room_answers").select("team_id,answer,created_at").eq("room_code", code).eq("question_index", qIndex)
       .then(({ data }) => setMine(choiceRanking(question, (data ?? []) as ScoredAnswer[]).find((r) => r.team_id === teamId) ?? null));
   }, [phase, question, code, qIndex, teamId]);

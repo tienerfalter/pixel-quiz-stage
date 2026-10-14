@@ -66,6 +66,7 @@ interface QuizContextValue extends SyncState {
   setStatus: (status: GameStatus) => void;
   setShowScores: (on: boolean) => void;
   adjustScore: (id: string, delta: number) => void;
+  undoScore: (id: string) => void;
   revealRandomTile: (total: number) => void;
   revealAllTiles: (total: number) => void;
   setMosaicAuto: (on: boolean) => void;
@@ -124,6 +125,7 @@ const FALLBACK_CONTEXT: QuizContextValue = {
   setStatus: noop,
   setShowScores: noop,
   adjustScore: noop,
+  undoScore: noop,
   revealRandomTile: noop,
   revealAllTiles: noop,
   setMosaicAuto: noop,
@@ -267,6 +269,12 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     return () => { supabase.removeChannel(ch); };
   }, [room]);
 
+  // Audio-Frage: Buzzer-Druck pausiert die Wiedergabe sofort (Host ist Single-Writer).
+  useEffect(() => {
+    if (room?.role !== "host" || !buzzerWinner) return;
+    setState((s) => (s.audio.playing ? { ...s, audio: { ...s.audio, playing: false } } : s));
+  }, [buzzerWinner, room]);
+
   // Host pushes state to the cloud room (debounced)
   const lastKey = useRef("");
   const lastSeq = useRef(0);
@@ -323,7 +331,8 @@ export function QuizProvider({ children }: { children: ReactNode }) {
       const timer = phase !== "guessing" && s.timer.running
         ? { ...s.timer, running: false, remainingMs: timerRemainingMs(s.timer), endsAt: null }
         : s.timer;
-      return { ...s, phase, timer, mosaicAuto: phase === "guessing" ? s.mosaicAuto : false };
+      const audio = phase === "locked" || phase === "resolved" ? { ...s.audio, playing: false } : s.audio;
+      return { ...s, phase, timer, audio, mosaicAuto: phase === "guessing" ? s.mosaicAuto : false };
     });
   }, []);
 
@@ -349,7 +358,12 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     adjustScore: (id, delta) =>
       setState((s) => ({
         ...s,
-        teams: s.teams.map((t) => (t.id === id ? { ...t, score: t.score + delta } : t)),
+        teams: s.teams.map((t) => (t.id === id ? { ...t, score: t.score + delta, lastDelta: delta } : t)),
+      })),
+    undoScore: (id) =>
+      setState((s) => ({
+        ...s,
+        teams: s.teams.map((t) => (t.id === id && t.lastDelta ? { ...t, score: t.score - t.lastDelta, lastDelta: undefined } : t)),
       })),
     revealRandomTile,
     revealAllTiles: (total) =>
@@ -402,7 +416,9 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         const timer = !left && s.timer.running
           ? { ...s.timer, running: false, remainingMs: timerRemainingMs(s.timer), endsAt: null }
           : s.timer;
-        return { ...s, buzzerLocked, buzzerResetSeq: s.buzzerResetSeq + 1, phase: left ? s.phase : "locked", timer };
+        const isAudio = s.quiz?.questions[s.currentQuestionIndex]?.mediaType === "audio";
+        const audio = isAudio ? { ...s.audio, playing: left && s.phase === "guessing" } : s.audio;
+        return { ...s, buzzerLocked, buzzerResetSeq: s.buzzerResetSeq + 1, phase: left ? s.phase : "locked", timer, audio };
       }),
   };
 

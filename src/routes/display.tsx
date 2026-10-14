@@ -47,6 +47,7 @@ function DisplayPage() {
     return undefined;
   }, [status]);
   const question = status === "running" ? quiz?.questions[currentQuestionIndex] : undefined;
+  const waiting = !!question && phase === "ready";
   const bg = quiz?.branding?.backgroundImage;
   const compactResolution = phase === "resolved" && question && ["mosaic", "grid_coords", "clue_ladder"].includes(question.type);
 
@@ -55,7 +56,7 @@ function DisplayPage() {
       className="bg-stage relative flex h-screen w-screen flex-col overflow-hidden bg-cover bg-center"
       style={bg ? { backgroundImage: `url(${bg})` } : undefined}
     >
-      {question && <StageTimer />}
+      {question && !waiting && <StageTimer />}
       {quiz?.branding?.cornerLogo && (
         <img src={quiz.branding.cornerLogo} alt="Logo" className="absolute right-8 top-8 h-20 w-auto object-contain" />
       )}
@@ -101,6 +102,11 @@ function DisplayPage() {
                 <button onClick={() => setAskCode(true)} className="mt-10 rounded-xl bg-secondary px-6 py-3 text-lg font-semibold">Mit Live-Raum verbinden</button>
               )
             )}
+          </div>
+        ) : waiting ? (
+          <div className="relative z-30 animate-in fade-in duration-700">
+            <p className="text-3xl font-semibold uppercase tracking-[0.4em] text-primary">Frage {currentQuestionIndex + 1}</p>
+            <p className="mt-4 text-xl text-muted-foreground">Gleich geht's los …</p>
           </div>
         ) : (
           <>
