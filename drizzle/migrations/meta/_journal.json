@@ -15,6 +15,13 @@
       "when": 1791972077752,
       "tag": "0001_room_answers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791973188106,
+      "tag": "0002_buzzer_lockout",
+      "breakpoints": true
     }
   ]
 }

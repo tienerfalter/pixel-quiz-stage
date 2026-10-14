@@ -8,7 +8,7 @@ interface RoomRow {
   phase: string;
   current_question_index: number;
   buzzer_winner: string | null;
-  state: { teams?: Team[] } | null;
+  state: { teams?: Team[]; buzzerLocked?: string[] } | null;
   quiz: { meta?: { title?: string }; questions?: QuizQuestion[]; branding?: { mobileBanner?: string } } | null;
 }
 
@@ -113,7 +113,7 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
   const winnerName = row?.state?.teams?.find((t) => t.id === winner)?.name ?? "Ein anderes Team";
 
   async function buzz() {
-    if (pressing || winner) return;
+    if (pressing || winner || row?.state?.buzzerLocked?.includes(teamId)) return;
     setPressing(true);
     navigator.vibrate?.(80);
     await supabase.rpc("press_buzzer", { _room: code, _team: teamId });
@@ -121,7 +121,10 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
   }
 
   let body;
-  if (phase === "guessing" && question && !needsInput(question)) {
+  const lockedOut = !!row?.state?.buzzerLocked?.includes(teamId);
+  if (phase === "guessing" && question && !needsInput(question) && lockedOut) {
+    body = <div className="rounded-3xl bg-destructive p-10 text-center text-destructive-foreground"><p className="text-5xl font-extrabold">Leider falsch!</p><p className="mt-3">Die anderen Teams dürfen jetzt buzzern.</p></div>;
+  } else if (phase === "guessing" && question && !needsInput(question)) {
     body = winner ? (
       winner === teamId ? (
         <div className="rounded-3xl bg-success p-10 text-center text-success-foreground"><p className="text-5xl font-extrabold">Du bist dran!</p></div>

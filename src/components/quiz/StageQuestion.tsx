@@ -5,11 +5,7 @@ import type { QuizQuestion } from "@/types/quiz";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-/** Years (unit "Jahr" or 1000–2100) are never formatted with thousands separators. */
-function fmtNum(v: number, unit?: string) {
-  const isYear = /^jahr/i.test(unit ?? "") || (Number.isInteger(v) && v >= 1000 && v <= 2100);
-  return isYear ? String(v) : v.toLocaleString("de-DE");
-}
+import { fmtValue } from "@/lib/units";
 
 function SolutionBox({ text }: { text?: string | undefined }) {
   if (!text) return null;
@@ -53,15 +49,15 @@ export function StageQuestion({ question }: { question: QuizQuestion }) {
             {resolved && (
               <div className="absolute -top-16 flex -translate-x-1/2 flex-col items-center animate-in fade-in zoom-in duration-700"
                 style={{ left: `${Math.max(0, Math.min(100, ((question.correctValue - min) / (max - min)) * 100))}%` }}>
-                <span className="rounded-lg bg-success px-3 py-1 font-mono text-2xl font-bold text-success-foreground">{fmtNum(question.correctValue, unit)} {unit}</span>
+                <span className="rounded-lg bg-success px-3 py-1 font-mono text-2xl font-bold text-success-foreground">{fmtValue(question.correctValue, unit)}</span>
                 <span className="h-14 w-1.5 rounded-full bg-success" />
               </div>
             )}
           </div>
           <div className="mt-4 flex justify-between font-mono text-4xl font-bold">
-            <span>{fmtNum(min, unit)} {unit}</span>
+            <span>{fmtValue(min, unit)}</span>
             <span className="text-2xl text-muted-foreground self-center">Schätzt!</span>
-            <span>{fmtNum(max, unit)} {unit}</span>
+            <span>{fmtValue(max, unit)}</span>
           </div>
         </div>
       );

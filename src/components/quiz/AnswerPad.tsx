@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { deviationText, fmtValue } from "@/lib/units";
 import type { QuizOption, QuizQuestion } from "@/types/quiz";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -18,8 +19,6 @@ export function needsInput(q: QuizQuestion) {
   return !!choiceOptions(q) || q.type === "slider" || q.type === "grid_coords";
 }
 
-const fmt = (n: number, unit?: string) =>
-  `${unit === "Jahr" || (n >= 1000 && n <= 2100) ? String(n) : n.toLocaleString("de-DE")}${unit ? ` ${unit}` : ""}`;
 
 function feedback(q: QuizQuestion, a: PadAnswer): { ok: boolean | null; text: string } {
   const opts = choiceOptions(q);
@@ -34,7 +33,7 @@ function feedback(q: QuizQuestion, a: PadAnswer): { ok: boolean | null; text: st
   }
   if (q.type === "slider" && a.value !== undefined) {
     const diff = Math.abs(a.value - q.correctValue);
-    return { ok: diff === 0, text: `Lösung: ${fmt(q.correctValue, q.sliderConfig?.unit)} · ihr lagt ${fmt(diff, q.sliderConfig?.unit)} daneben` };
+    return { ok: diff === 0, text: diff === 0 ? `Punktlandung! Lösung: ${fmtValue(q.correctValue, q.sliderConfig?.unit)}` : `Lösung: ${fmtValue(q.correctValue, q.sliderConfig?.unit)} · ${deviationText(diff, q.sliderConfig?.unit, q.sliderConfig?.unitPlural)}` };
   }
   return { ok: null, text: "" };
 }
@@ -90,11 +89,11 @@ export function AnswerPad({ question, qIndex, phase, code, teamId }: {
     const v = shown.value ?? Math.round((min + max) / 2 / step) * step;
     input = (
       <div className="space-y-6 rounded-3xl border bg-card/80 p-6">
-        <p className="font-mono text-5xl font-extrabold text-primary">{fmt(v, unit)}</p>
+        <p className="font-mono text-5xl font-extrabold text-primary">{fmtValue(v, unit)}</p>
         <input type="range" min={min} max={max} step={step} value={v} disabled={!active}
           onChange={(e) => setDraft({ value: Number(e.target.value) })}
           className="h-10 w-full touch-manipulation accent-primary" aria-label="Schätzwert" />
-        <div className="flex justify-between text-sm text-muted-foreground"><span>{fmt(min, unit)}</span><span>{fmt(max, unit)}</span></div>
+        <div className="flex justify-between text-sm text-muted-foreground"><span>{fmtValue(min, unit)}</span><span>{fmtValue(max, unit)}</span></div>
         {!saved && <button disabled={!active || busy} onClick={() => submit({ value: v })} className="w-full rounded-xl bg-primary py-4 text-xl font-extrabold text-primary-foreground disabled:opacity-40">Schätzung einloggen</button>}
       </div>
     );

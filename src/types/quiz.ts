@@ -38,7 +38,7 @@ export interface ChoiceQuestion extends BaseQuestion {
 
 export interface SliderQuestion extends BaseQuestion {
   type: "slider";
-  sliderConfig: { min: number; max: number; step?: number; unit?: string };
+  sliderConfig: { min: number; max: number; step?: number; unit?: string; unitPlural?: string };
   correctValue: number;
   scoring?: {
     mode: "closest_wins" | "tolerance_tiers";
