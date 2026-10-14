@@ -71,6 +71,9 @@ interface QuizContextValue extends SyncState {
   resetTimer: () => void;
   addTime: (seconds: number) => void;
   playSfx: (kind: SfxEvent["kind"]) => void;
+  room: RoomLink | null;
+  setRoom: (r: RoomLink | null) => void;
+  buzzerWinner: string | null;
 }
 
 const QuizContext = createContext<QuizContextValue | null>(null);
@@ -118,6 +121,9 @@ const FALLBACK_CONTEXT: QuizContextValue = {
   resetTimer: noop,
   addTime: noop,
   playSfx: noop,
+  room: null,
+  setRoom: noop,
+  buzzerWinner: null,
 };
 
 const DEFAULT_TEAMS: Team[] = [
@@ -292,6 +298,9 @@ export function QuizProvider({ children }: { children: ReactNode }) {
 
   const value: QuizContextValue = {
     ...state,
+    room,
+    setRoom,
+    buzzerWinner,
     setQuiz,
     goToQuestion,
     nextQuestion: () => goToQuestion(state.currentQuestionIndex + 1),
