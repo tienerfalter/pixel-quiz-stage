@@ -3,3 +3,7 @@
 - [x] Richtige Koordinatenzellen und Lösung hervorheben.
 - [x] Stufenrätsel-Auflösung kompakt oberhalb der Hinweise platzieren.
 - [x] Auflösungsablauf und 16:9-Darstellung mit Testpaket bei 1280×720 und 1920×1080 prüfen.
+- [x] Host-Schlüssel für /admin, Startseite nur Mitspieler-Portal.
+- [x] Live-Räume: Raumcode, Teams beitreten/kicken/umbenennen, Beamer per ?room=, QR-Code.
+- [x] Handy-Buzzer in Echtzeit (wer zuerst drückt), Anzeige im Pult und auf dem Beamer.
+- [ ] Mit echtem Quiz auf mehreren Geräten durchspielen (wartet auf Test durch den Nutzer).
