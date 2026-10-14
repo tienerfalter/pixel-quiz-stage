@@ -11,7 +11,7 @@ function fmtNum(v: number, unit?: string) {
   return isYear ? String(v) : v.toLocaleString("de-DE");
 }
 
-function SolutionBox({ text }: { text?: string }) {
+function SolutionBox({ text }: { text?: string | undefined }) {
   if (!text) return null;
   return (
     <div className="shadow-glow mt-10 rounded-3xl border-4 border-success bg-success/20 px-12 py-8 animate-in fade-in zoom-in duration-700">

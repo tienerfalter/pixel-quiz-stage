@@ -5,12 +5,12 @@ interface State { error: Error | null }
 
 /** Catches render errors of a single question so the rest of the app keeps working. */
 export class QuestionErrorBoundary extends Component<Props, State> {
-  state: State = { error: null };
+  override state: State = { error: null };
   static getDerivedStateFromError(error: Error) { return { error }; }
-  componentDidUpdate(prev: Props) {
+  override componentDidUpdate(prev: Props) {
     if (prev.resetKey !== this.props.resetKey && this.state.error) this.setState({ error: null });
   }
-  render() {
+  override render() {
     if (!this.state.error) return this.props.children;
     return (
       <div className="mt-8 rounded-2xl border-2 border-destructive bg-card p-6 text-center">
