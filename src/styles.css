@@ -60,6 +60,95 @@
   --ring: oklch(0.85 0.17 85);
   --gradient-stage: radial-gradient(ellipse at top, oklch(0.32 0.1 280) 0%, oklch(0.14 0.03 270) 60%);
   --glow-primary: 0 0 40px oklch(0.85 0.17 85 / 35%);
+  --stage-image-overlay: transparent;
+}
+
+.quiz-themed { color-scheme: dark; }
+
+[data-quiz-theme="light"] {
+  color-scheme: light;
+  --background: oklch(0.98 0.005 240);
+  --foreground: oklch(0.2 0.02 260);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.43 0.16 255);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.9 0.015 240);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--secondary);
+  --muted-foreground: oklch(0.43 0.02 260);
+  --accent: oklch(0.45 0.18 15);
+  --accent-foreground: oklch(1 0 0);
+  --success: oklch(0.42 0.13 150);
+  --success-foreground: oklch(1 0 0);
+  --destructive: oklch(0.47 0.19 25);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.2 0.02 260 / 25%);
+  --input: oklch(0.2 0.02 260 / 8%);
+  --ring: var(--primary);
+  --gradient-stage: var(--background);
+  --glow-primary: 0 0 24px oklch(0.43 0.16 255 / 18%);
+  --stage-image-overlay: oklch(0.98 0.005 240 / 85%);
+}
+
+[data-quiz-theme="high-contrast"] {
+  --background: oklch(0 0 0);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.12 0 0);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.95 0.19 105);
+  --primary-foreground: var(--background);
+  --secondary: oklch(0.24 0 0);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--secondary);
+  --muted-foreground: oklch(0.9 0 0);
+  --accent: oklch(0.85 0.16 195);
+  --accent-foreground: var(--background);
+  --success: oklch(0.9 0.2 145);
+  --success-foreground: var(--background);
+  --destructive: oklch(0.8 0.15 25);
+  --destructive-foreground: var(--background);
+  --border: oklch(1 0 0 / 70%);
+  --input: oklch(1 0 0 / 18%);
+  --ring: var(--primary);
+  --gradient-stage: var(--background);
+  --glow-primary: 0 0 0 transparent;
+  --stage-image-overlay: oklch(0 0 0 / 92%);
+}
+
+[data-quiz-theme="neon"] {
+  --background: oklch(0.13 0.015 300);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.2 0.025 300);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.9 0.17 180);
+  --primary-foreground: var(--background);
+  --secondary: oklch(0.27 0.03 300);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--secondary);
+  --muted-foreground: oklch(0.82 0.025 300);
+  --accent: oklch(0.8 0.2 340);
+  --accent-foreground: var(--background);
+  --success: oklch(0.88 0.22 140);
+  --success-foreground: var(--background);
+  --destructive: oklch(0.78 0.18 25);
+  --destructive-foreground: var(--background);
+  --border: oklch(0.9 0.17 180 / 40%);
+  --input: oklch(0.9 0.17 180 / 12%);
+  --ring: var(--primary);
+  --gradient-stage: var(--background);
+  --glow-primary: 0 0 30px oklch(0.9 0.17 180 / 30%);
+  --stage-image-overlay: oklch(0.13 0.015 300 / 80%);
+}
+
+:is([data-quiz-theme="light"], [data-quiz-theme="high-contrast"], [data-quiz-theme="neon"]) :is([class*="bg-card/"], [class*="bg-secondary/"]) {
+  background-color: var(--card);
 }
 
 @layer base {

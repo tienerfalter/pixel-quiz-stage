@@ -2,7 +2,8 @@ import { fetchRoom, fetchTeams, subscribeRoom } from "@/lib/roomData";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { QuizQuestion, Team } from "@/types/quiz";
+import type { QuizBranding, QuizQuestion, Team } from "@/types/quiz";
+import { resolveQuizTheme } from "@/lib/quizPresentation";
 import { AnswerPad, needsInput } from "./AnswerPad";
 
 interface RoomRow {
@@ -10,7 +11,7 @@ interface RoomRow {
   current_question_index: number;
   buzzer_winner: string | null;
   state: { teams?: Team[]; buzzerLocked?: string[]; autoScoring?: boolean } | null;
-  quiz: { meta?: { title?: string }; questions?: QuizQuestion[]; branding?: { mobileBanner?: string } } | null;
+  quiz: { meta?: { title?: string }; questions?: QuizQuestion[]; branding?: QuizBranding } | null;
 }
 
 const storeKey = (code: string) => `quiz-team-${code}`;
@@ -73,7 +74,7 @@ export function PlayerPad({ initialRoom }: { initialRoom?: string | undefined })
   const banner = row?.quiz?.branding?.mobileBanner;
 
   return (
-    <main className="bg-stage flex min-h-screen flex-col items-center px-6 py-10">
+    <main data-quiz-theme={resolveQuizTheme(row?.quiz?.branding?.theme)} className="quiz-themed bg-stage flex min-h-screen flex-col items-center px-6 py-10 text-foreground">
       {banner && <img src={banner} alt="" className="mb-6 w-full max-w-sm rounded-xl" />}
       <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">Live Quiz</p>
       <h1 className="mt-2 text-4xl font-extrabold">Mitspielen</h1>

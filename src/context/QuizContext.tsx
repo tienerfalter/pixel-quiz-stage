@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import type { GameStatus, LoadedQuizPackage, Phase, QuizQuestion, Team } from "@/types/quiz";
+import type { GameStatus, LoadedQuizPackage, Phase, QuizQuestion, QuizTheme, Team } from "@/types/quiz";
+import { questionAudioSource, resolveQuizTheme } from "@/lib/quizPresentation";
 import { revokeQuizPackage } from "@/utils/quizPackageLoader";
 import { fetchRoom, fetchTeams, subscribeRoom } from "@/lib/roomData";
 import { pushRoom } from "@/lib/room.functions";
@@ -53,6 +54,7 @@ interface SyncState {
 }
 
 interface QuizContextValue extends SyncState {
+  theme: QuizTheme;
   setQuiz: (q: LoadedQuizPackage | null) => void;
   goToQuestion: (i: number) => void;
   nextQuestion: () => void;
@@ -95,6 +97,7 @@ const QuizContext = createContext<QuizContextValue | null>(null);
  */
 const noop = () => {};
 const FALLBACK_CONTEXT: QuizContextValue = {
+  theme: "dark",
   quiz: null,
   currentQuestionIndex: 0,
   phase: "guessing",
@@ -162,7 +165,7 @@ const freshQuestionState = (audio: AudioState, question?: QuizQuestion) => ({
   revealedTiles: [] as number[],
   revealedClues: 1,
   mosaicAuto: false,
-  audio: { ...audio, playing: false },
+  audio: { ...audio, playing: !!questionAudioSource(question) && !(question?.timing?.hasTimer && question.timing.timeLimitSeconds) },
   timer: initialTimer(question),
   buzzerLocked: [] as string[],
 });
@@ -325,13 +328,17 @@ export function QuizProvider({ children }: { children: ReactNode }) {
       const timer = phase !== "guessing" && s.timer.running
         ? { ...s.timer, running: false, remainingMs: timerRemainingMs(s.timer), endsAt: null }
         : s.timer;
-      const audio = phase === "locked" || phase === "resolved" ? { ...s.audio, playing: false } : s.audio;
+      const audio = phase === "locked" || phase === "resolved" || phase === "ready"
+        ? { ...s.audio, playing: false }
+        : s.phase === "ready" && questionAudioSource(s.quiz?.questions[s.currentQuestionIndex])
+          ? { ...s.audio, playing: true } : s.audio;
       return { ...s, phase, timer, audio, mosaicAuto: phase === "guessing" ? s.mosaicAuto : false };
     });
   }, []);
 
   const value: QuizContextValue = {
     ...state,
+    theme: resolveQuizTheme(state.quiz?.branding?.theme),
     room,
     setRoom,
     buzzerWinner,
@@ -375,7 +382,8 @@ export function QuizProvider({ children }: { children: ReactNode }) {
           return { ...s, timer: { ...s.timer, running: false, endsAt: null, remainingMs: timerRemainingMs(s.timer) } };
         }
         if (s.timer.remainingMs <= 0) return s;
-        return { ...s, phase: "guessing", timer: { ...s.timer, running: true, endsAt: Date.now() + s.timer.remainingMs } };
+        const audio = s.phase === "ready" && questionAudioSource(s.quiz?.questions[s.currentQuestionIndex]) ? { ...s.audio, playing: true } : s.audio;
+        return { ...s, phase: "guessing", audio, timer: { ...s.timer, running: true, endsAt: Date.now() + s.timer.remainingMs } };
       }),
     resetTimer: () =>
       setState((s) => {
@@ -410,7 +418,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         const timer = !left && s.timer.running
           ? { ...s.timer, running: false, remainingMs: timerRemainingMs(s.timer), endsAt: null }
           : s.timer;
-        const isAudio = s.quiz?.questions[s.currentQuestionIndex]?.mediaType === "audio";
+        const isAudio = !!questionAudioSource(s.quiz?.questions[s.currentQuestionIndex]);
         const audio = isAudio ? { ...s.audio, playing: left && s.phase === "guessing" } : s.audio;
         return { ...s, buzzerLocked, buzzerResetSeq: s.buzzerResetSeq + 1, phase: left ? s.phase : "locked", timer, audio };
       }),

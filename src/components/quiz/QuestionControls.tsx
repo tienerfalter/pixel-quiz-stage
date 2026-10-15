@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Pause, Play, RotateCcw, Volume2 } from "lucide-react";
 import { useQuiz, useTimerSeconds } from "@/context/QuizContext";
 import type { QuizQuestion } from "@/types/quiz";
+import { questionAudioSource } from "@/lib/quizPresentation";
 
 const btn = "rounded-lg bg-secondary px-4 py-2 font-semibold hover:bg-muted disabled:opacity-40";
 
@@ -36,7 +37,7 @@ export function QuestionControls({ question }: { question: QuizQuestion }) {
 
   return (
     <div className="mt-4 space-y-3">
-      {question.mediaType === "audio" && question.media && (
+      {questionAudioSource(question) && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl bg-secondary/60 p-3">
           <span className="text-sm font-semibold text-muted-foreground">Audio</span>
           <button className={btn} onClick={() => q.setAudio({ playing: true })}><Play className="inline h-4 w-4" /> Play</button>
