@@ -16,8 +16,9 @@ afterEach(() => vi.unstubAllGlobals());
 describe("Quiz package presentation", () => {
   it("supports simultaneous image and sound and legacy audio sources", () => {
     expect(questionAudioSource(question)).toBe("assets/sound.mp3");
-    expect(questionAudioSource({ ...question, audio: undefined, mediaType: "audio", media: "old.mp3" })).toBe("old.mp3");
-    expect(questionAudioSource({ ...question, audio: undefined })).toBeUndefined();
+    const { audio: _audio, ...imageQuestion } = question;
+    expect(questionAudioSource({ ...imageQuestion, mediaType: "audio", media: "old.mp3" })).toBe("old.mp3");
+    expect(questionAudioSource(imageQuestion)).toBeUndefined();
   });
 
   it.each(["dark", "light", "high-contrast", "neon"])("accepts the %s theme", (theme) => {
