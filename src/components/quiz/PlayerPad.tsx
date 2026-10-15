@@ -10,7 +10,7 @@ interface RoomRow {
   phase: string;
   current_question_index: number;
   buzzer_winner: string | null;
-  state: { teams?: Team[]; buzzerLocked?: string[]; autoScoring?: boolean } | null;
+  state: { teams?: Team[]; buzzerLocked?: string[]; autoScoring?: boolean; lockReason?: string | null } | null;
   quiz: { meta?: { title?: string }; questions?: QuizQuestion[]; branding?: QuizBranding } | null;
 }
 
@@ -143,11 +143,11 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
       </button>
     );
   } else if (question && needsInput(question) && (phase === "guessing" || phase === "locked" || phase === "resolved")) {
-    body = <AnswerPad key={`${row!.current_question_index}`} question={question} qIndex={row!.current_question_index} phase={phase} code={code} teamId={teamId} autoScoring={row?.state?.autoScoring !== false} />;
+    body = <AnswerPad key={`${row!.current_question_index}`} question={question} qIndex={row!.current_question_index} phase={phase} code={code} teamId={teamId} autoScoring={row?.state?.autoScoring !== false} lockReason={row?.state?.lockReason ?? null} />;
   } else if (phase === "guessing") {
     body = <Info title="Frage läuft" text="Schau auf den Beamer und beratet euch im Team." />;
   } else if (phase === "locked" || phase === "resolved") {
-    body = <Info title="Die Zeit ist um!" text="Schau auf den Beamer." />;
+    body = <Info title={row?.state?.lockReason === "timeout" && phase === "locked" ? "Die Zeit ist abgelaufen!" : "Runde beendet!"} text="Schau auf den Beamer." />;
   } else if (phase === "intermission" || phase === "podium" || phase === "farewell") {
     body = <Info title="Das Quiz ist vorbei" text="Schau auf den Beamer für die Siegerehrung!" />;
   } else {

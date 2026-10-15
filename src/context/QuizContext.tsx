@@ -64,7 +64,7 @@ interface QuizContextValue extends SyncState {
   nextQuestion: () => void;
   prevQuestion: () => void;
   startQuestion: () => void;
-  setPhase: (p: Phase) => void;
+  setPhase: (p: Phase, reason?: LockReason) => void;
   addTeam: (name: string) => void;
   removeTeam: (id: string) => void;
   renameTeam: (id: string, name: string) => void;

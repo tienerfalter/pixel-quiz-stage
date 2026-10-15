@@ -36,7 +36,7 @@ export function AdminTimer() {
   const secs = useTimerSeconds(q.timer);
 
   useEffect(() => {
-    if (q.timer.running && secs === 0 && q.phase === "guessing") q.setPhase("locked");
+    if (q.timer.running && secs === 0 && q.phase === "guessing") q.setPhase("locked", "timeout");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secs, q.timer.running, q.phase]);
 

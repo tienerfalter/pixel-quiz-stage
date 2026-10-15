@@ -57,7 +57,7 @@ export function QuestionControls({ question }: { question: QuizQuestion }) {
           <span className="text-sm font-semibold text-muted-foreground">Mosaik {q.revealedTiles.length}/{tiles}</span>
           {question.revealMode === "manual" ? (
             <button className={btn} disabled={q.revealedTiles.length >= tiles} onClick={() => q.revealRandomTile(tiles)}>+ Nächste Kachel aufdecken</button>
-          ) : (
+          ) : q.phase !== "guessing" ? null : (
             <button className={btn} disabled={q.revealedTiles.length >= tiles} onClick={() => q.setMosaicAuto(!q.mosaicAuto)}>
               {q.mosaicAuto ? "⏸ Auto-Aufdecken pausieren" : `▶ Auto-Aufdecken starten (${interval}s)`}
             </button>

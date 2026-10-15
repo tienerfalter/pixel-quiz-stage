@@ -46,8 +46,8 @@ function feedback(q: QuizQuestion, a: PadAnswer, auto: boolean, mine?: ChoiceRan
   return { ok: null, text: "" };
 }
 
-export function AnswerPad({ question, qIndex, phase, code, teamId, autoScoring = true }: {
-  question: QuizQuestion; qIndex: number; phase: string; code: string; teamId: string; autoScoring?: boolean;
+export function AnswerPad({ question, qIndex, phase, code, teamId, autoScoring = true, lockReason = null }: {
+  question: QuizQuestion; qIndex: number; phase: string; code: string; teamId: string; autoScoring?: boolean; lockReason?: string | null;
 }) {
   const [saved, setSaved] = useState<PadAnswer | null>(null);
   const [draft, setDraft] = useState<PadAnswer>({});
@@ -145,7 +145,7 @@ export function AnswerPad({ question, qIndex, phase, code, teamId, autoScoring =
       status = <div className={`rounded-2xl p-4 text-lg font-bold ${f.ok === true ? "bg-success text-success-foreground" : f.ok === false ? "bg-destructive text-destructive-foreground" : "bg-card"}`}>{f.text}</div>;
     } else status = <div className="rounded-2xl bg-card p-4 font-bold">Keine Antwort abgegeben</div>;
   } else if (phase === "locked") {
-    status = <div className="rounded-2xl bg-destructive/20 p-4 text-lg font-bold">Die Zeit ist um! Schau auf den Beamer.</div>;
+    status = <div className="rounded-2xl bg-destructive/20 p-4 text-lg font-bold">{lockReason === "timeout" ? "Die Zeit ist abgelaufen!" : "Runde beendet!"} Schau auf den Beamer.</div>;
   } else if (saved) {
     status = <div className="rounded-2xl bg-success/20 p-4 text-lg font-bold">Eingabe gespeichert! Warten auf Auswertung…</div>;
   }

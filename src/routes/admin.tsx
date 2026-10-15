@@ -130,7 +130,7 @@ function RoomPanel() {
           {winner ? `🔔 ${winner.name} hat gebuzzert!` : "Buzzer frei"}
           {q.buzzerLocked.length > 0 && <span className="block text-sm font-normal opacity-80">Gesperrt: {q.teams.filter((t) => q.buzzerLocked.includes(t.id)).map((t) => t.name).join(", ")}</span>}
         </span>
-        {q.buzzerWinner && (
+        {q.buzzerWinner && q.quiz?.questions[q.currentQuestionIndex]?.onWrongAnswer !== "end_question" && (
           <button onClick={() => q.buzzerWinner && q.lockOutBuzzer(q.buzzerWinner)} className="rounded-lg bg-background px-3 py-2 text-sm font-bold text-foreground">Buzzer für andere Teams freigeben</button>
         )}
       </div>
@@ -303,6 +303,7 @@ function AdminControl() {
                   <button onClick={() => {
                     q.playSfx("correct");
                     q.setAudio({ playing: false });
+                    if (isBuzzerRound && q.phase === "guessing") q.setPhase("locked", "ended");
                     const w = q.buzzerWinner;
                     if (q.autoScoring && isBuzzerRound && w && pts > 0) bookOnce(`${qKey}-ok-${w}`, () => q.adjustScore(w, pts));
                   }} className="flex items-center gap-1 rounded-lg bg-success px-5 py-3 text-lg font-bold text-success-foreground"><Check className="h-5 w-5" /> Richtig</button>
@@ -310,7 +311,8 @@ function AdminControl() {
                     q.playSfx("wrong");
                     const w = q.buzzerWinner;
                     if (q.autoScoring && isBuzzerRound && w && question.penaltyPoints) bookOnce(`${qKey}-bad-${w}`, () => q.adjustScore(w, -question.penaltyPoints!));
-                    if (q.room && question.type === "buzzer" && q.buzzerWinner && q.phase === "guessing") {
+                    if (question.type === "buzzer" && q.phase === "guessing" && question.onWrongAnswer === "end_question") q.setPhase("locked", "ended");
+                    else if (q.room && question.type === "buzzer" && q.buzzerWinner && q.phase === "guessing") {
                       if (question.onWrongAnswer === "end_question") q.setPhase("locked");
                       else q.lockOutBuzzer(q.buzzerWinner);
                     }
@@ -318,7 +320,9 @@ function AdminControl() {
                 </div>
               </div>
               {q.phase === "ready" && (
-                <button onClick={q.toggleTimer} className="shadow-glow w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">▶ Timer starten & Eingaben freigeben</button>
+                <button onClick={q.startQuestion} className="shadow-glow w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">
+                  {question.type === "mosaic" && question.revealMode !== "manual" ? "▶ Timer & Auto-Aufdecken starten" : "▶ Frage einblenden / Start"}
+                </button>
               )}
               {q.phase === "guessing" && (
                 <button onClick={() => q.setPhase("locked")} className="w-full rounded-xl bg-secondary py-4 text-lg font-bold hover:bg-muted">⏸ Eingaben sperren</button>
