@@ -24,7 +24,7 @@ export const Route = createFileRoute("/display")({
 });
 
 function DisplayPage() {
-  const { quiz, currentQuestionIndex, teams, sfx, nextQuestion, phase, status, showScores, room, setRoom, buzzerWinner } = useQuiz();
+  const { quiz, theme, currentQuestionIndex, teams, sfx, nextQuestion, phase, status, showScores, room, setRoom, buzzerWinner } = useQuiz();
   const { room: roomParam } = Route.useSearch();
   const navigate = Route.useNavigate();
   const [codeInput, setCodeInput] = useState("");
@@ -53,8 +53,9 @@ function DisplayPage() {
 
   return (
     <main
-      className="bg-stage relative flex h-screen w-screen flex-col overflow-hidden bg-cover bg-center"
-      style={bg ? { backgroundImage: `url(${bg})` } : undefined}
+      data-quiz-theme={theme}
+      className="quiz-themed bg-stage relative flex h-screen w-screen flex-col overflow-hidden bg-cover bg-center text-foreground"
+      style={bg ? { backgroundImage: `linear-gradient(var(--stage-image-overlay), var(--stage-image-overlay)), url(${bg})` } : undefined}
     >
       {question && !waiting && <StageTimer />}
       {quiz?.branding?.cornerLogo && (

@@ -21,6 +21,7 @@ export interface BaseQuestion {
   points: number;
   penaltyPoints?: number;
   media?: string;
+  audio?: string;
   mediaType?: "image" | "audio";
   hostNotes?: { solution?: string; trivia?: string };
 }
@@ -93,7 +94,10 @@ export interface QuizMeta {
   hideScoresLive: boolean;
 }
 
+export type QuizTheme = "dark" | "light" | "high-contrast" | "neon";
+
 export interface QuizBranding {
+  theme?: QuizTheme;
   backgroundImage?: string;
   cornerLogo?: string;
   mobileBanner?: string;

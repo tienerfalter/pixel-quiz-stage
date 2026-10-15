@@ -4,6 +4,8 @@ import { choiceRanking, isRankBonus, type ChoiceRank, type ScoredAnswer } from "
 import { Lock, Volume2 } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
 import type { QuizQuestion } from "@/types/quiz";
+import { questionAudioSource } from "@/lib/quizPresentation";
+import { Button } from "@/components/ui/button";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -94,9 +96,9 @@ export function StageQuestion({ question }: { question: QuizQuestion }) {
     case "clue_ladder":
       return <div className="flex w-full flex-col items-center"><DefaultMedia question={question} /><ClueLadder question={question} /></div>;
     case "mosaic":
-      return <Mosaic question={question} />;
+      return <><QuestionAudio question={question} compact /><Mosaic question={question} /></>;
     case "grid_coords":
-      return <GridCoords question={question} />;
+      return <><QuestionAudio question={question} compact /><GridCoords question={question} /></>;
     default:
       return (
         <>
@@ -108,32 +110,56 @@ export function StageQuestion({ question }: { question: QuizQuestion }) {
 }
 
 function DefaultMedia({ question }: { question: QuizQuestion }) {
-  if (question.mediaType === "audio" && question.media) return <AudioStage src={question.media} />;
-  if (!question.media) return null;
+  const hasImage = !!question.media && question.mediaType !== "audio";
   return (
-    <img src={question.media} alt="" className="mt-10 max-h-[40vh] w-auto max-w-3xl rounded-2xl object-contain" />
+    <>
+      {hasImage && <img src={question.media} alt="" className="mt-10 max-h-[40vh] w-auto max-w-full rounded-2xl object-contain" />}
+      <QuestionAudio question={question} compact={hasImage} />
+    </>
   );
 }
 
-function AudioStage({ src }: { src: string }) {
+function QuestionAudio({ question, compact = false }: { question: QuizQuestion; compact?: boolean }) {
+  const src = questionAudioSource(question);
+  return src ? <AudioStage src={src} compact={compact} /> : null;
+}
+
+function AudioStage({ src, compact }: { src: string; compact: boolean }) {
   const { audio } = useQuiz();
   const ref = useRef<HTMLAudioElement>(null);
+  const [blocked, setBlocked] = useState(false);
+  const tryPlay = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.play().then(() => setBlocked(false)).catch((error: unknown) => {
+      if (error instanceof Error && error.name === "NotAllowedError") setBlocked(true);
+    });
+  };
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (audio.playing) el.play().catch(() => {});
-    else el.pause();
-  }, [audio.playing]);
+    if (audio.playing) tryPlay();
+    else { el.pause(); setBlocked(false); }
+  }, [audio.playing, src]);
   useEffect(() => { if (ref.current) ref.current.volume = audio.volume; }, [audio.volume]);
   useEffect(() => {
     if (!ref.current || audio.restartSeq === 0) return;
     ref.current.currentTime = 0;
-    ref.current.play().catch(() => {});
+    if (audio.playing) tryPlay();
   }, [audio.restartSeq]);
+
+  if (compact) return (
+    <div className="mt-3 flex shrink-0 items-center justify-center gap-2 text-primary">
+      <audio ref={ref} src={src} preload="auto" />
+      {blocked ? <Button onClick={tryPlay} variant="secondary"><Volume2 /> Ton aktivieren</Button>
+        : <Volume2 aria-label={audio.playing ? "Ton läuft" : "Ton pausiert"} className={`h-6 w-6 ${audio.playing ? "motion-safe:animate-pulse" : "opacity-50"}`} />}
+    </div>
+  );
 
   return (
     <div className="mt-12 flex flex-col items-center gap-8">
       <audio ref={ref} src={src} preload="auto" />
+      {blocked && <Button onClick={tryPlay} variant="secondary"><Volume2 /> Ton aktivieren</Button>}
       <div className={`relative flex h-40 w-40 items-center justify-center rounded-full bg-primary/15 ${audio.playing ? "shadow-glow" : ""}`}>
         {audio.playing && <span className="absolute inset-0 animate-ping rounded-full bg-primary/20" />}
         <Volume2 className="h-20 w-20 text-primary" />
