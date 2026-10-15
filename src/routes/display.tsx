@@ -105,10 +105,7 @@ function DisplayPage() {
             )}
           </div>
         ) : waiting ? (
-          <div className="relative z-30 animate-in fade-in duration-700">
-            <p className="text-3xl font-semibold uppercase tracking-[0.4em] text-primary">Frage {currentQuestionIndex + 1}</p>
-            <p className="mt-4 text-xl text-muted-foreground">Gleich geht's los …</p>
-          </div>
+          null
         ) : (
           <>
             <p className="text-xl font-semibold uppercase tracking-[0.3em] text-primary">
