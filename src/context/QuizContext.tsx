@@ -51,7 +51,11 @@ interface SyncState {
   buzzerResetSeq: number;
   /** Book points automatically on correct/wrong and on resolve */
   autoScoring: boolean;
+  /** Why the round was locked: timer ran out vs. ended otherwise */
+  lockReason: LockReason;
 }
+
+export type LockReason = "timeout" | "ended" | null;
 
 interface QuizContextValue extends SyncState {
   theme: QuizTheme;
@@ -59,6 +63,7 @@ interface QuizContextValue extends SyncState {
   goToQuestion: (i: number) => void;
   nextQuestion: () => void;
   prevQuestion: () => void;
+  startQuestion: () => void;
   setPhase: (p: Phase) => void;
   addTeam: (name: string) => void;
   removeTeam: (id: string) => void;
@@ -113,6 +118,7 @@ const FALLBACK_CONTEXT: QuizContextValue = {
   buzzerLocked: [],
   buzzerResetSeq: 0,
   autoScoring: true,
+  lockReason: null,
   setAutoScoring: noop,
   lockOutBuzzer: noop,
   setQuiz: noop,
@@ -137,6 +143,7 @@ const FALLBACK_CONTEXT: QuizContextValue = {
   setAudio: noop,
   restartAudio: noop,
   toggleTimer: noop,
+  startQuestion: noop,
   resetTimer: noop,
   addTime: noop,
   playSfx: noop,
@@ -161,11 +168,13 @@ function initialTimer(question?: QuizQuestion): TimerState {
 }
 
 const freshQuestionState = (audio: AudioState, question?: QuizQuestion) => ({
-  phase: (question?.timing?.hasTimer && question.timing.timeLimitSeconds ? "ready" : "guessing") as Phase,
+  // Jede Frage startet in der Vorlese-Phase; erst "Frage einblenden / Start" zeigt sie.
+  phase: "ready" as Phase,
+  lockReason: null as LockReason,
   revealedTiles: [] as number[],
   revealedClues: 1,
   mosaicAuto: false,
-  audio: { ...audio, playing: !!questionAudioSource(question) && !(question?.timing?.hasTimer && question.timing.timeLimitSeconds) },
+  audio: { ...audio, playing: false },
   timer: initialTimer(question),
   buzzerLocked: [] as string[],
 });
@@ -323,8 +332,9 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const setPhase = useCallback((phase: Phase) => {
+  const setPhase = useCallback((phase: Phase, reason: LockReason = "ended") => {
     setState((s) => {
+      const lockReason: LockReason = phase === "locked" ? reason : phase === "resolved" ? s.lockReason : null;
       const timer = phase !== "guessing" && s.timer.running
         ? { ...s.timer, running: false, remainingMs: timerRemainingMs(s.timer), endsAt: null }
         : s.timer;
@@ -332,7 +342,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         ? { ...s.audio, playing: false }
         : s.phase === "ready" && questionAudioSource(s.quiz?.questions[s.currentQuestionIndex])
           ? { ...s.audio, playing: true } : s.audio;
-      return { ...s, phase, timer, audio, mosaicAuto: phase === "guessing" ? s.mosaicAuto : false };
+      return { ...s, phase, lockReason, timer, audio, mosaicAuto: phase === "guessing" ? s.mosaicAuto : false };
     });
   }, []);
 
@@ -375,6 +385,16 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     setAudio: (patch) => setState((s) => ({ ...s, audio: { ...s.audio, ...patch } })),
     restartAudio: () =>
       setState((s) => ({ ...s, audio: { ...s.audio, playing: true, restartSeq: s.audio.restartSeq + 1 } })),
+    startQuestion: () =>
+      setState((s) => {
+        if (s.phase !== "ready") return s;
+        const q = s.quiz?.questions[s.currentQuestionIndex];
+        const timer = s.timer.enabled && s.timer.remainingMs > 0
+          ? { ...s.timer, running: true, endsAt: Date.now() + s.timer.remainingMs } : s.timer;
+        const audio = questionAudioSource(q) ? { ...s.audio, playing: true } : s.audio;
+        const mosaicAuto = q?.type === "mosaic" && q.revealMode !== "manual";
+        return { ...s, phase: "guessing", lockReason: null, timer, audio, mosaicAuto };
+      }),
     toggleTimer: () =>
       setState((s) => {
         if (!s.timer.enabled) return s;
@@ -382,6 +402,13 @@ export function QuizProvider({ children }: { children: ReactNode }) {
           return { ...s, timer: { ...s.timer, running: false, endsAt: null, remainingMs: timerRemainingMs(s.timer) } };
         }
         if (s.timer.remainingMs <= 0) return s;
+        if (s.phase === "ready") {
+          const q = s.quiz?.questions[s.currentQuestionIndex];
+          return { ...s, phase: "guessing", lockReason: null,
+            audio: questionAudioSource(q) ? { ...s.audio, playing: true } : s.audio,
+            mosaicAuto: q?.type === "mosaic" && q.revealMode !== "manual",
+            timer: { ...s.timer, running: true, endsAt: Date.now() + s.timer.remainingMs } };
+        }
         const audio = s.phase === "ready" && questionAudioSource(s.quiz?.questions[s.currentQuestionIndex]) ? { ...s.audio, playing: true } : s.audio;
         return { ...s, phase: "guessing", audio, timer: { ...s.timer, running: true, endsAt: Date.now() + s.timer.remainingMs } };
       }),
@@ -391,7 +418,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         const t = initialTimer(q);
         if (!t.enabled) return s;
         // Nach Ablauf: zurück in die Ratephase, Timer läuft sofort wieder.
-        if (s.phase === "locked") return { ...s, phase: "guessing", timer: { ...t, running: true, endsAt: Date.now() + t.remainingMs } };
+        if (s.phase === "locked") return { ...s, phase: "guessing", lockReason: null, timer: { ...t, running: true, endsAt: Date.now() + t.remainingMs } };
         return { ...s, timer: t };
       }),
     addTime: (sec) =>
@@ -400,7 +427,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         const add = sec * 1000;
         if (s.phase === "locked") {
           const rem = timerRemainingMs(s.timer) + add;
-          return { ...s, phase: "guessing", timer: { ...s.timer, running: true, endsAt: Date.now() + rem, remainingMs: rem } };
+          return { ...s, phase: "guessing", lockReason: null, timer: { ...s.timer, running: true, endsAt: Date.now() + rem, remainingMs: rem } };
         }
         return {
           ...s,
@@ -419,8 +446,14 @@ export function QuizProvider({ children }: { children: ReactNode }) {
           ? { ...s.timer, running: false, remainingMs: timerRemainingMs(s.timer), endsAt: null }
           : s.timer;
         const isAudio = !!questionAudioSource(s.quiz?.questions[s.currentQuestionIndex]);
-        const audio = isAudio ? { ...s.audio, playing: left && s.phase === "guessing" } : s.audio;
-        return { ...s, buzzerLocked, buzzerResetSeq: s.buzzerResetSeq + 1, phase: left ? s.phase : "locked", timer, audio };
+        // Frage-Audio pausiert bleiben, bis der Fehler-Sound verklungen ist (2,5 s).
+        const audio = isAudio ? { ...s.audio, playing: false } : s.audio;
+        if (isAudio && left && s.phase === "guessing") {
+          const idx = s.currentQuestionIndex;
+          setTimeout(() => setState((c) => c.phase === "guessing" && c.currentQuestionIndex === idx
+            ? { ...c, audio: { ...c.audio, playing: true } } : c), 2500);
+        }
+        return { ...s, buzzerLocked, buzzerResetSeq: s.buzzerResetSeq + 1, phase: left ? s.phase : "locked", lockReason: left ? s.lockReason : "ended", timer, audio };
       }),
   };
 
