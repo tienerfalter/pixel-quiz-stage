@@ -130,7 +130,7 @@ function RoomPanel() {
           {winner ? `🔔 ${winner.name} hat gebuzzert!` : "Buzzer frei"}
           {q.buzzerLocked.length > 0 && <span className="block text-sm font-normal opacity-80">Gesperrt: {q.teams.filter((t) => q.buzzerLocked.includes(t.id)).map((t) => t.name).join(", ")}</span>}
         </span>
-        {q.buzzerWinner && q.quiz?.questions[q.currentQuestionIndex]?.onWrongAnswer !== "end_question" && (
+        {q.buzzerWinner && (q.quiz?.questions[q.currentQuestionIndex] as { onWrongAnswer?: string } | undefined)?.onWrongAnswer !== "end_question" && (
           <button onClick={() => q.buzzerWinner && q.lockOutBuzzer(q.buzzerWinner)} className="rounded-lg bg-background px-3 py-2 text-sm font-bold text-foreground">Buzzer für andere Teams freigeben</button>
         )}
       </div>

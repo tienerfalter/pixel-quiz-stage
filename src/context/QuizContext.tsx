@@ -409,8 +409,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
             mosaicAuto: q?.type === "mosaic" && q.revealMode !== "manual",
             timer: { ...s.timer, running: true, endsAt: Date.now() + s.timer.remainingMs } };
         }
-        const audio = s.phase === "ready" && questionAudioSource(s.quiz?.questions[s.currentQuestionIndex]) ? { ...s.audio, playing: true } : s.audio;
-        return { ...s, phase: "guessing", audio, timer: { ...s.timer, running: true, endsAt: Date.now() + s.timer.remainingMs } };
+        return { ...s, phase: "guessing", timer: { ...s.timer, running: true, endsAt: Date.now() + s.timer.remainingMs } };
       }),
     resetTimer: () =>
       setState((s) => {
