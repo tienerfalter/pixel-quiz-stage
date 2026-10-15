@@ -1,6 +1,6 @@
 # Aufgaben
-- [ ] Gleichzeitiges Bild und Audio aus Quiz-Paketen unterstützen und prüfen.
-- [ ] Importierte Farbschemata auf Beamer und Handys anwenden und prüfen.
+- [x] Gleichzeitiges Bild und Audio aus Quiz-Paketen unterstützen und prüfen.
+- [x] Importierte Farbschemata auf Beamer und Handys anwenden und prüfen.
 - [x] Mosaik-Lösung mit Trivia anzeigen.
 - [x] Richtige Koordinatenzellen und Lösung hervorheben.
 - [x] Stufenrätsel-Auflösung kompakt oberhalb der Hinweise platzieren.
