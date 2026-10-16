@@ -97,6 +97,24 @@ export function StageQuestion({ question }: { question: QuizQuestion }) {
       return <div className="flex w-full flex-col items-center"><DefaultMedia question={question} /><ClueLadder question={question} /></div>;
     case "mosaic":
       return <><QuestionAudio question={question} compact /><Mosaic question={question} /></>;
+    case "sorting": {
+      const byId = new Map(question.options.map((o) => [o.id, o]));
+      const list = resolved ? question.correctOrder.map((id) => byId.get(id)).filter((o): o is NonNullable<typeof o> => !!o) : question.options;
+      return (
+        <div className="flex w-full max-w-4xl flex-col items-center">
+          <DefaultMedia question={question} />
+          <div className="mt-10 flex w-full flex-col gap-4">
+            {list.map((o, i) => (
+              <div key={o.id} className={`flex items-center gap-5 rounded-2xl border-2 px-8 py-5 backdrop-blur transition-all duration-700 ${resolved ? "border-success bg-success/25 motion-safe:animate-in motion-safe:slide-in-from-bottom-4" : "border-primary/40 bg-card/80"}`} style={{ animationDelay: `${i * 150}ms` }}>
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-2xl font-extrabold text-primary-foreground">{resolved ? i + 1 : o.id}</span>
+                <span className="text-4xl font-bold">{o.text}</span>
+              </div>
+            ))}
+          </div>
+          {resolved && isRankBonus(question) && <RankList question={question} />}
+        </div>
+      );
+    }
     case "grid_coords":
       return <><QuestionAudio question={question} compact /><GridCoords question={question} /></>;
     default:

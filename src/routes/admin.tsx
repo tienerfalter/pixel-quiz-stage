@@ -36,6 +36,7 @@ const TYPE_LABEL: Record<string, string> = {
   clue_ladder: "Hinweis-Leiter",
   mosaic: "Mosaik",
   grid_coords: "Koordinaten",
+  sorting: "Sortieren",
 };
 
 function AdminPage() {
@@ -144,7 +145,7 @@ function AnswerCount({ code }: { code: string }) {
   const question = q.quiz?.questions[idx];
   const [count, setCount] = useState(0);
   const relevant = !!question && q.status === "running" && needsInput(question);
-  const autoLock = !!question && (["choice", "slider", "grid_coords"].includes(question.type) || (question.type === "clue_ladder" && question.inputMode === "choice"));
+  const autoLock = !!question && (["choice", "slider", "grid_coords", "sorting"].includes(question.type) || (question.type === "clue_ladder" && question.inputMode === "choice"));
   const total = q.teams.length;
   const allIn = total > 0 && count >= total;
   const { phase, setPhase } = q;

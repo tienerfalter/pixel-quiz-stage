@@ -1,5 +1,6 @@
 import { fetchAnswers } from "@/lib/roomData";
 import { useEffect, useState } from "react";
+import { SortingInput } from "./SortingInput";
 import { supabase } from "@/integrations/supabase/client";
 import { deviationText, fmtValue } from "@/lib/units";
 import { choiceRanking, isRankBonus, roundPoints, type ChoiceRank, type ScoredAnswer } from "@/lib/scoring";
@@ -7,7 +8,7 @@ import type { QuizOption, QuizQuestion } from "@/types/quiz";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-export type PadAnswer = { option?: string; value?: number; cell?: string };
+export type PadAnswer = { option?: string; value?: number; cell?: string; order?: string[]; submittedAt?: string };
 
 /** Options shown as tiles for a question, or null when it isn't a tile question. */
 export function choiceOptions(q: QuizQuestion): QuizOption[] | null {
@@ -18,7 +19,7 @@ export function choiceOptions(q: QuizQuestion): QuizOption[] | null {
 
 /** True when the phone shows an input form instead of the buzzer. */
 export function needsInput(q: QuizQuestion) {
-  return !!choiceOptions(q) || q.type === "slider" || q.type === "grid_coords";
+  return !!choiceOptions(q) || q.type === "slider" || q.type === "grid_coords" || q.type === "sorting";
 }
 
 
@@ -38,6 +39,12 @@ function feedback(q: QuizQuestion, a: PadAnswer, auto: boolean, mine?: ChoiceRan
     const ok = (q.correctCells ?? []).map((c) => c.toUpperCase()).includes(a.cell ?? "");
     if (ok && auto && q.scoring && mine) return { ok, text: isRankBonus(q) ? `Volltreffer! Platz ${mine.rank} – du erhältst ${mine.points} Punkte!` : `Volltreffer! +${mine.points} Punkte!` };
     return { ok, text: ok ? win("Volltreffer!") : `Daneben – Ziel: ${(q.correctCells ?? []).join(", ")}` };
+  }
+  if (q.type === "sorting") {
+    const ok = (a.order ?? []).join("|") === q.correctOrder.join("|");
+    if (ok && auto && q.scoring && mine) return { ok, text: isRankBonus(q) ? `Perfekt sortiert! Platz ${mine.rank} – du erhältst ${mine.points} Punkte!` : `Perfekt sortiert! +${mine.points} Punkte!` };
+    const txt = q.correctOrder.map((id) => q.options.find((o) => o.id === id)?.text ?? id).join(" → ");
+    return { ok, text: ok ? win("Perfekt sortiert!") : `Leider falsch – richtig: ${txt}` };
   }
   if (q.type === "slider" && a.value !== undefined) {
     const diff = Math.abs(a.value - q.correctValue);
@@ -61,7 +68,7 @@ export function AnswerPad({ question, qIndex, phase, code, teamId, autoScoring =
 
   const [mine, setMine] = useState<ChoiceRank | null>(null);
   useEffect(() => {
-    if (phase !== "resolved" || question.type !== "choice" && question.type !== "grid_coords") return;
+    if (phase !== "resolved" || question.type !== "choice" && question.type !== "grid_coords" && question.type !== "sorting") return;
     fetchAnswers(code, qIndex)
       .then((data) => setMine(choiceRanking(question, data as ScoredAnswer[]).find((r) => r.team_id === teamId) ?? null));
   }, [phase, question, code, qIndex, teamId]);
@@ -112,6 +119,9 @@ export function AnswerPad({ question, qIndex, phase, code, teamId, autoScoring =
         {!saved && <button disabled={!active || busy} onClick={() => submit({ value: v })} className="w-full rounded-xl bg-primary py-4 text-xl font-extrabold text-primary-foreground disabled:opacity-40">Schätzung einloggen</button>}
       </div>
     );
+  } else if (question.type === "sorting") {
+    input = <SortingInput key={qIndex} options={question.options} saved={saved?.order} disabled={!active || busy}
+      onSubmit={(order) => submit({ order, submittedAt: new Date().toISOString() })} />;
   } else if (question.type === "grid_coords") {
     const rows = question.grid?.rows || 6;
     const cols = question.grid?.cols || 6;
