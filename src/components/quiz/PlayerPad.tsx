@@ -10,7 +10,7 @@ interface RoomRow {
   phase: string;
   current_question_index: number;
   buzzer_winner: string | null;
-  state: { teams?: Team[]; buzzerLocked?: string[]; autoScoring?: boolean; lockReason?: string | null } | null;
+  state: { teams?: Team[]; buzzerLocked?: string[]; autoScoring?: boolean; lockReason?: string | null; showScoreOnMobile?: boolean } | null;
   quiz: { meta?: { title?: string }; questions?: QuizQuestion[]; branding?: QuizBranding } | null;
 }
 
@@ -159,6 +159,9 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
       <div>
         <p className="text-sm text-muted-foreground">Du spielst als</p>
         <p className="text-3xl font-bold text-primary">{teamName || "…"}</p>
+        {row?.state?.showScoreOnMobile && (
+          <p className="mt-1 font-mono text-lg font-bold text-muted-foreground">Punkte: {row.state.teams?.find((t) => t.id === teamId)?.score ?? 0}</p>
+        )}
       </div>
       {body}
       <button onClick={onLeave} className="text-sm text-muted-foreground underline">Raum verlassen</button>
