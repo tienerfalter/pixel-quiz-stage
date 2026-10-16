@@ -346,6 +346,10 @@ function AdminControl() {
               <span>Punktestand auf Beamer anzeigen:</span>
               <button onClick={() => q.setShowScores(!q.showScores)} className={`rounded-full px-3 py-1 font-bold ${q.showScores ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}`}>{q.showScores ? "An" : "Aus"}</button>
             </label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <span>Eigenen Punktestand auf Handys zeigen:</span>
+              <button onClick={() => q.setShowScoreOnMobile(!q.showScoreOnMobile)} className={`rounded-full px-3 py-1 font-bold ${q.showScoreOnMobile ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}`}>{q.showScoreOnMobile ? "An" : "Aus"}</button>
+            </label>
           </div>
           <div className="space-y-2">
             {q.teams.map((t) => (

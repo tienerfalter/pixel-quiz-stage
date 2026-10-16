@@ -38,6 +38,8 @@ interface SyncState {
   phase: Phase;
   status: GameStatus;
   showScores: boolean;
+  /** Show each team its own score on the player phones */
+  showScoreOnMobile: boolean;
   teams: Team[];
   revealedTiles: number[];
   revealedClues: number;
@@ -72,6 +74,7 @@ interface QuizContextValue extends SyncState {
   endQuiz: () => void;
   setStatus: (status: GameStatus) => void;
   setShowScores: (on: boolean) => void;
+  setShowScoreOnMobile: (on: boolean) => void;
   adjustScore: (id: string, delta: number) => void;
   undoScore: (id: string) => void;
   revealRandomTile: (total: number) => void;
@@ -108,6 +111,7 @@ const FALLBACK_CONTEXT: QuizContextValue = {
   phase: "guessing",
   status: "intro",
   showScores: false,
+  showScoreOnMobile: false,
   teams: [],
   revealedTiles: [],
   revealedClues: 1,
@@ -133,6 +137,7 @@ const FALLBACK_CONTEXT: QuizContextValue = {
   endQuiz: noop,
   setStatus: noop,
   setShowScores: noop,
+  setShowScoreOnMobile: noop,
   adjustScore: noop,
   undoScore: noop,
   revealRandomTile: noop,
@@ -194,6 +199,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     currentQuestionIndex: 0,
     status: "intro",
     showScores: false,
+    showScoreOnMobile: false,
     teams: DEFAULT_TEAMS,
     sfx: { kind: "correct", seq: 0 },
     buzzerResetSeq: 0,
@@ -365,6 +371,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     endQuiz: () => setState((s) => ({ ...s, status: "intermission", ...freshQuestionState(s.audio) })),
     setStatus: (status) => setState((s) => ({ ...s, status })),
     setShowScores: (showScores) => setState((s) => ({ ...s, showScores })),
+    setShowScoreOnMobile: (showScoreOnMobile) => setState((s) => ({ ...s, showScoreOnMobile })),
     removeTeam: (id) => setState((s) => ({ ...s, teams: s.teams.filter((t) => t.id !== id) })),
     adjustScore: (id, delta) =>
       setState((s) => ({
