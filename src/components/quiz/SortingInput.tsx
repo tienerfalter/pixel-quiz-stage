@@ -16,7 +16,7 @@ function Tile({ option, index, disabled }: { option: QuizOption; index: number; 
   );
 }
 
-export function SortingInput({ options, saved, disabled, onSubmit }: { options: QuizOption[]; saved?: string[]; disabled: boolean; onSubmit: (order: string[]) => void }) {
+export function SortingInput({ options, saved, disabled, onSubmit }: { options: QuizOption[]; saved?: string[] | undefined; disabled: boolean; onSubmit: (order: string[]) => void }) {
   const [order, setOrder] = useState<string[]>(() => saved ?? options.map((o) => o.id));
   const shown = saved ?? order;
   const sensors = useSensors(
