@@ -1,4 +1,4 @@
-export type QuestionType = "buzzer" | "choice" | "slider" | "clue_ladder" | "mosaic" | "grid_coords";
+export type QuestionType = "buzzer" | "choice" | "slider" | "clue_ladder" | "mosaic" | "grid_coords" | "sorting";
 
 export interface QuizOption {
   id: string;
@@ -78,7 +78,15 @@ export interface GridCoordsQuestion extends BaseQuestion {
   scoring?: { mode: "fixed"; points: number } | { mode: "rank_bonus"; pointsByRank: number[]; fallbackPoints?: number };
 }
 
+export interface SortingQuestion extends BaseQuestion {
+  type: "sorting";
+  options: QuizOption[];
+  correctOrder: string[];
+  scoring?: { mode: "fixed"; points: number } | { mode: "rank_bonus"; pointsByRank: number[]; fallbackPoints?: number };
+}
+
 export type QuizQuestion =
+  | SortingQuestion
   | BuzzerQuestion
   | ChoiceQuestion
   | SliderQuestion
