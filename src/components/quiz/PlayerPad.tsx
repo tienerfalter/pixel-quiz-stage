@@ -130,6 +130,14 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
         <p className="mt-3 text-muted-foreground">{p?.subtitle || "Gleich geht es weiter…"}</p>
       </div>
     );
+  } else if (question?.type === "info") {
+    body = (
+      <div className="rounded-3xl border bg-card/80 p-8 text-left backdrop-blur">
+        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">{question.title}</p>
+        <p className="mt-3 text-2xl font-bold">{question.question}</p>
+        {question.media && question.mediaType !== "audio" && <img src={question.media} alt="" className="mt-4 w-full rounded-xl object-contain" />}
+      </div>
+    );
   } else if (phase === "ready" && question) {
     body = <Info title="Bereithalten… Gleich geht's los!" text="Frage wird vorgelesen… Bereithalten!" />;
   } else if (phase === "guessing" && question && !needsInput(question) && lockedOut) {
