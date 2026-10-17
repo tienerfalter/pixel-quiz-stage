@@ -2,7 +2,7 @@ import { fetchRoom, fetchTeams, subscribeRoom } from "@/lib/roomData";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { QuizBranding, QuizQuestion, Team } from "@/types/quiz";
+import type { QuizBranding, QuizPause, QuizQuestion, Team } from "@/types/quiz";
 import { resolveQuizTheme } from "@/lib/quizPresentation";
 import { AnswerPad, needsInput } from "./AnswerPad";
 
@@ -10,8 +10,8 @@ interface RoomRow {
   phase: string;
   current_question_index: number;
   buzzer_winner: string | null;
-  state: { teams?: Team[]; buzzerLocked?: string[]; autoScoring?: boolean; lockReason?: string | null; showScoreOnMobile?: boolean } | null;
-  quiz: { meta?: { title?: string }; questions?: QuizQuestion[]; branding?: QuizBranding } | null;
+  state: { teams?: Team[]; buzzerLocked?: string[]; autoScoring?: boolean; lockReason?: string | null; showScoreOnMobile?: boolean; isPaused?: boolean } | null;
+  quiz: { meta?: { title?: string }; questions?: QuizQuestion[]; branding?: QuizBranding; pause?: QuizPause } | null;
 }
 
 const storeKey = (code: string) => `quiz-team-${code}`;
@@ -121,7 +121,16 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
 
   let body;
   const lockedOut = !!row?.state?.buzzerLocked?.includes(teamId);
-  if (phase === "ready" && question) {
+  if (row?.state?.isPaused) {
+    const p = row.quiz?.pause;
+    body = (
+      <div className="rounded-3xl border bg-card/80 p-10 backdrop-blur">
+        {p?.image && <img src={p.image} alt="" className="mx-auto mb-6 max-h-48 rounded-xl object-contain" />}
+        <p className="text-3xl font-extrabold">{p?.title || "⏸ Kurze Pause"}</p>
+        <p className="mt-3 text-muted-foreground">{p?.subtitle || "Gleich geht es weiter…"}</p>
+      </div>
+    );
+  } else if (phase === "ready" && question) {
     body = <Info title="Bereithalten… Gleich geht's los!" text="Frage wird vorgelesen… Bereithalten!" />;
   } else if (phase === "guessing" && question && !needsInput(question) && lockedOut) {
     body = (
