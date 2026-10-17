@@ -27,8 +27,11 @@ export function sortingMixedOrder(options: QuizOption[], correctOrder: string[],
     let rng = (seed + Math.imul(attempt + 1, 2654435761)) >>> 0;
     for (let i = shuffled.length - 1; i > 0; i--) {
       rng = (Math.imul(rng, 1664525) + 1013904223) >>> 0;
-      const j = rng % (i + 1);
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      const a = shuffled[i];
+      const b = shuffled[j];
+      if (a === undefined || b === undefined) continue;
+      shuffled[i] = b;
+      shuffled[j] = a;
     }
     if (!shuffled.every((id, i) => id === solution[i])) return shuffled;
   }
