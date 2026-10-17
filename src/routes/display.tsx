@@ -24,7 +24,7 @@ export const Route = createFileRoute("/display")({
 });
 
 function DisplayPage() {
-  const { quiz, theme, currentQuestionIndex, teams, sfx, nextQuestion, phase, status, showScores, room, setRoom, buzzerWinner } = useQuiz();
+  const { quiz, theme, currentQuestionIndex, teams, sfx, nextQuestion, phase, status, showScores, room, setRoom, buzzerWinner, isPaused } = useQuiz();
   const { room: roomParam } = Route.useSearch();
   const navigate = Route.useNavigate();
   const [codeInput, setCodeInput] = useState("");
@@ -47,7 +47,8 @@ function DisplayPage() {
     return undefined;
   }, [status]);
   const question = status === "running" ? quiz?.questions[currentQuestionIndex] : undefined;
-  const waiting = !!question && phase === "ready";
+  // Info-Folien haben keine Vorlese-Phase und erscheinen sofort.
+  const waiting = !!question && phase === "ready" && question.type !== "info";
   const bg = quiz?.branding?.backgroundImage;
   const compactResolution = phase === "resolved" && question && ["mosaic", "grid_coords", "clue_ladder"].includes(question.type);
 
@@ -63,7 +64,15 @@ function DisplayPage() {
       )}
 
       <div className={`flex min-h-0 flex-1 flex-col items-center justify-center text-center ${compactResolution ? "stage-resolved-content px-8 pb-4 pt-28" : "px-16"}`}>
-        {quiz && status === "intermission" ? (
+        {isPaused ? (
+          <div className="relative z-30 flex flex-col items-center animate-in fade-in duration-700">
+            {quiz?.pause?.image && (
+              <img src={quiz.pause.image} alt="" className="mb-8 max-h-[40vh] w-auto rounded-2xl object-contain shadow-glow" />
+            )}
+            <h1 className="text-6xl font-extrabold">{quiz?.pause?.title || "⏸ Kurze Pause"}</h1>
+            <p className="mt-6 text-2xl uppercase tracking-[0.3em] text-primary">{quiz?.pause?.subtitle || "Gleich geht es weiter…"}</p>
+          </div>
+        ) : quiz && status === "intermission" ? (
           <div className="relative z-30 flex flex-col items-center animate-in fade-in duration-1000">
             {quiz.outro?.intermission?.image && (
               <img src={quiz.outro.intermission.image} alt="" className="mb-8 max-h-[40vh] w-auto rounded-2xl object-contain shadow-glow" />
