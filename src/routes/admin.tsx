@@ -312,11 +312,9 @@ function AdminControl() {
                     q.playSfx("wrong");
                     const w = q.buzzerWinner;
                     if (q.autoScoring && isBuzzerRound && w && question.penaltyPoints) bookOnce(`${qKey}-bad-${w}`, () => q.adjustScore(w, -question.penaltyPoints!));
-                    if (question.type === "buzzer" && q.phase === "guessing" && question.onWrongAnswer === "end_question") q.setPhase("locked", "ended");
-                    else if (q.room && question.type === "buzzer" && q.buzzerWinner && q.phase === "guessing") {
-                      if (question.onWrongAnswer === "end_question") q.setPhase("locked");
-                      else q.lockOutBuzzer(q.buzzerWinner);
-                    }
+                    const onWrong = (question as { onWrongAnswer?: string }).onWrongAnswer;
+                    if (isBuzzerRound && q.phase === "guessing" && onWrong === "end_question") q.setPhase("locked", "ended");
+                    else if (q.room && isBuzzerRound && q.buzzerWinner && q.phase === "guessing") q.lockOutBuzzer(q.buzzerWinner);
                   }} className="flex items-center gap-1 rounded-lg bg-destructive px-5 py-3 text-lg font-bold text-destructive-foreground"><X className="h-5 w-5" /> Falsch</button>
                 </div>
               </div>

@@ -55,6 +55,7 @@ export interface SliderQuestion extends BaseQuestion {
 export interface ClueLadderQuestion extends BaseQuestion {
   type: "clue_ladder";
   inputMode: "buzzer" | "choice";
+  onWrongAnswer?: "allow_others" | "end_question";
   pointsPerLevel: number[];
   clues: string[];
   options?: QuizOption[];
@@ -65,6 +66,7 @@ export interface MosaicQuestion extends BaseQuestion {
   media: string;
   grid: { rows: number; cols: number };
   revealMode: "auto" | "manual";
+  onWrongAnswer?: "allow_others" | "end_question";
   intervalSeconds?: number;
   pointsPerTier: { maxRevealedPercent: number; points: number }[];
 }
