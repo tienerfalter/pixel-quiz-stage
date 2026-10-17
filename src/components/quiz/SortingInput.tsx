@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { sortingMixedOrder } from "@/lib/quizPresentation";
 import type { QuizOption } from "@/types/quiz";
 
 function Tile({ option, index, disabled }: { option: QuizOption; index: number; disabled: boolean }) {
@@ -16,22 +17,12 @@ function Tile({ option, index, disabled }: { option: QuizOption; index: number; 
   );
 }
 
-export function SortingInput({ options, saved, disabled, onSubmit }: { options: QuizOption[]; saved?: string[] | undefined; disabled: boolean; onSubmit: (order: string[]) => void }) {
-  // Der Creator liefert die Optionen in Lösungsreihenfolge – auf dem Handy
-  // werden sie zufällig gemischt (nie exakt die Lösung als Startreihenfolge).
+export function SortingInput({ options, correctOrder, questionId, saved, disabled, onSubmit }: { options: QuizOption[]; correctOrder: string[]; questionId: string; saved?: string[] | undefined; disabled: boolean; onSubmit: (order: string[]) => void }) {
+  // Deterministische Mischung aus der Frage-ID – Beamer und alle Handys
+  // zeigen dieselbe gemischte Reihenfolge (nie exakt die Lösung).
   const [order, setOrder] = useState<string[]>(() => {
     if (saved) return saved;
-    const ids = options.map((o) => o.id);
-    if (ids.length < 2) return ids;
-    let shuffled = ids;
-    do {
-      shuffled = [...ids];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!];
-      }
-    } while (shuffled.every((id, i) => id === ids[i]));
-    return shuffled;
+    return sortingMixedOrder(options, correctOrder, questionId);
   });
   const shown = saved ?? order;
   const sensors = useSensors(
