@@ -5,7 +5,6 @@ import { questionAudioSource, sortingMixedOrder } from "@/lib/quizPresentation";
 import { Lock, Volume2 } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
 import type { QuizQuestion } from "@/types/quiz";
-import { questionAudioSource } from "@/lib/quizPresentation";
 import { Button } from "@/components/ui/button";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
