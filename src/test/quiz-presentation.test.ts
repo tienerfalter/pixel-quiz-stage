@@ -1,8 +1,16 @@
 import JSZip from "jszip";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { questionAudioSource, resolveQuizTheme } from "@/lib/quizPresentation";
+import { questionAudioSource, resolveQuizTheme, sortingMixedOrder } from "@/lib/quizPresentation";
 import { loadQuizPackage } from "@/utils/quizPackageLoader";
-import type { QuizQuestion } from "@/types/quiz";
+import type { QuizOption, QuizQuestion } from "@/types/quiz";
+
+const options: QuizOption[] = [
+  { id: "a", text: "Erster" },
+  { id: "b", text: "Zweiter" },
+  { id: "c", text: "Dritter" },
+  { id: "d", text: "Vierter" },
+  { id: "e", text: "Fünfter" },
+];
 
 const question: QuizQuestion = {
   id: "dual", type: "buzzer", title: "Bild und Ton", question: "Was ist zu hören?",
