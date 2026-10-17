@@ -1,8 +1,16 @@
 import JSZip from "jszip";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { questionAudioSource, resolveQuizTheme } from "@/lib/quizPresentation";
+import { questionAudioSource, resolveQuizTheme, sortingMixedOrder } from "@/lib/quizPresentation";
 import { loadQuizPackage } from "@/utils/quizPackageLoader";
-import type { QuizQuestion } from "@/types/quiz";
+import type { QuizOption, QuizQuestion } from "@/types/quiz";
+
+const options: QuizOption[] = [
+  { id: "a", text: "Erster" },
+  { id: "b", text: "Zweiter" },
+  { id: "c", text: "Dritter" },
+  { id: "d", text: "Vierter" },
+  { id: "e", text: "Fünfter" },
+];
 
 const question: QuizQuestion = {
   id: "dual", type: "buzzer", title: "Bild und Ton", question: "Was ist zu hören?",
@@ -43,5 +51,21 @@ describe("Quiz package presentation", () => {
     expect(pkg.questions[0]?.audio).toBe("blob:sound");
     expect(pkg.branding?.theme).toBe("neon");
     expect(Object.keys(pkg.assetUrls)).toHaveLength(2);
+  });
+
+  it("mixes sorting options deterministically and never shows the solution order", () => {
+    const correctOrder = options.map((o) => o.id);
+    const mixed = sortingMixedOrder(options, correctOrder, "q-42");
+    expect(mixed).not.toEqual(correctOrder);
+    expect([...mixed].sort()).toEqual(correctOrder.sort());
+    expect(sortingMixedOrder(options, correctOrder, "q-42")).toEqual(mixed);
+    expect(sortingMixedOrder(options, correctOrder, "q-43")).not.toEqual(correctOrder);
+  });
+
+  it("mixes even two options and tolerates a mismatched correctOrder", () => {
+    const two = options.slice(0, 2);
+    expect(sortingMixedOrder(two, two.map((o) => o.id), "s")).toEqual(["b", "a"]);
+    // Uneinheitliche Metadaten: Mischung fällt auf die Optionen zurück statt zu crashen.
+    expect(sortingMixedOrder(two, ["x", "y", "z"], "s").sort()).toEqual(["a", "b"]);
   });
 });
