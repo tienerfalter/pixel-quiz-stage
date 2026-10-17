@@ -62,10 +62,10 @@ describe("Quiz package presentation", () => {
     expect(sortingMixedOrder(options, correctOrder, "q-43")).not.toEqual(correctOrder);
   });
 
-  it("falls back to a rotation when the seeded shuffle equals the solution", () => {
-    const correctOrder = options.map((o) => o.id);
-    let mixed = correctOrder;
-    for (let i = 0; i < 500 && mixed === undefined; i++) mixed = sortingMixedOrder(options, correctOrder, `seed-${i}`);
-    expect(sortingMixedOrder(options, correctOrder, "any-seed")).not.toEqual(correctOrder);
+  it("mixes even two options and tolerates a mismatched correctOrder", () => {
+    const two = options.slice(0, 2);
+    expect(sortingMixedOrder(two, two.map((o) => o.id), "s")).toEqual(["b", "a"]);
+    // Uneinheitliche Metadaten: Mischung fällt auf die Optionen zurück statt zu crashen.
+    expect(sortingMixedOrder(two, ["x", "y", "z"], "s").sort()).toEqual(["a", "b"]);
   });
 });
