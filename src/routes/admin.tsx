@@ -37,6 +37,7 @@ const TYPE_LABEL: Record<string, string> = {
   mosaic: "Mosaik",
   grid_coords: "Koordinaten",
   sorting: "Sortieren",
+  info: "Info-Folie",
 };
 
 function AdminPage() {
@@ -194,7 +195,8 @@ function AdminControl() {
   const question = q.quiz?.questions[q.currentQuestionIndex];
   const total = q.quiz?.questions.length ?? 0;
   const pts = question ? roundPoints(question, q.revealedTiles.length, q.revealedClues) : 0;
-  const isBuzzerRound = !!question && !needsInput(question);
+  const isBuzzerRound = !!question && question.type !== "info" && !needsInput(question);
+  const isInfo = question?.type === "info";
   const booked = useRef(new Set<string>());
   const bookOnce = (key: string, fn: () => void) => { if (booked.current.has(key)) return; booked.current.add(key); fn(); };
   const qKey = `${q.quiz?.sourceFileName}-${q.currentQuestionIndex}`;
@@ -236,6 +238,15 @@ function AdminControl() {
         </div>
 
         <RoomPanel />
+
+        {q.quiz && (
+          <button
+            onClick={() => q.setPaused(!q.isPaused)}
+            className={`w-full rounded-2xl border-2 py-5 text-2xl font-extrabold transition ${q.isPaused ? "shadow-glow animate-pulse border-accent bg-accent text-accent-foreground" : "border-border bg-card hover:border-accent/60"}`}
+          >
+            {q.isPaused ? "▶ Quiz fortsetzen" : "⏸ Quiz pausieren"}
+          </button>
+        )}
 
         {q.quiz && q.status === "intro" && (
           <section className="space-y-4 rounded-2xl border-2 border-primary/40 bg-card p-8 text-center">
