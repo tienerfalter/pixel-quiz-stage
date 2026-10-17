@@ -32,5 +32,6 @@ export function sortingMixedOrder(options: QuizOption[], correctOrder: string[],
     }
     if (!shuffled.every((id, i) => id === solution[i])) return shuffled;
   }
-  return [...ids.slice(1), ids[0]];
+  const first = ids[0];
+  return first ? [...ids.slice(1), first] : ids;
 }
