@@ -120,7 +120,7 @@ export function AnswerPad({ question, qIndex, phase, code, teamId, autoScoring =
       </div>
     );
   } else if (question.type === "sorting") {
-    input = <SortingInput key={qIndex} options={question.options} saved={saved?.order} disabled={!active || busy}
+    input = <SortingInput key={qIndex} options={question.options} correctOrder={question.correctOrder} questionId={question.id} saved={saved?.order} disabled={!active || busy}
       onSubmit={(order) => submit({ order, submittedAt: new Date().toISOString() })} />;
   } else if (question.type === "grid_coords") {
     const rows = question.grid?.rows || 6;
