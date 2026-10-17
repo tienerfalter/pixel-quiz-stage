@@ -353,6 +353,7 @@ function AdminControl() {
                 </button>
               )}
             </section>
+            )}
           </>
         )}
 
