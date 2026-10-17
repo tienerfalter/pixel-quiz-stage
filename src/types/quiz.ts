@@ -1,4 +1,4 @@
-export type QuestionType = "buzzer" | "choice" | "slider" | "clue_ladder" | "mosaic" | "grid_coords" | "sorting";
+export type QuestionType = "buzzer" | "choice" | "slider" | "clue_ladder" | "mosaic" | "grid_coords" | "sorting" | "info";
 
 export interface QuizOption {
   id: string;
@@ -87,7 +87,13 @@ export interface SortingQuestion extends BaseQuestion {
   scoring?: { mode: "fixed"; points: number } | { mode: "rank_bonus"; pointsByRank: number[]; fallbackPoints?: number };
 }
 
+/** Regie-Anweisung / Zwischenmoderation: keine Antworten, kein Timer, keine Punkte. */
+export interface InfoQuestion extends BaseQuestion {
+  type: "info";
+}
+
 export type QuizQuestion =
+  | InfoQuestion
   | SortingQuestion
   | BuzzerQuestion
   | ChoiceQuestion
@@ -120,10 +126,17 @@ export interface QuizIntro {
   showQrCode?: boolean;
 }
 
+export interface QuizPause {
+  title?: string;
+  subtitle?: string;
+  image?: string;
+}
+
 export interface QuizPackage {
   meta: QuizMeta;
   branding?: QuizBranding;
   intro?: QuizIntro;
+  pause?: QuizPause;
   questions: QuizQuestion[];
   outro?: {
     title?: string;

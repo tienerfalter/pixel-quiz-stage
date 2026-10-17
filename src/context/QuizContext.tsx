@@ -55,6 +55,11 @@ interface SyncState {
   autoScoring: boolean;
   /** Why the round was locked: timer ran out vs. ended otherwise */
   lockReason: LockReason;
+  /** Global pause: stage and phones show the pause screen */
+  isPaused: boolean;
+  /** Timer/audio were running when the pause started (resume on unpause) */
+  pausedResumeTimer: boolean;
+  pausedResumeAudio: boolean;
 }
 
 export type LockReason = "timeout" | "ended" | null;
@@ -91,6 +96,7 @@ interface QuizContextValue extends SyncState {
   /** Lock a team out after a wrong buzzer answer and free the buzzer for others */
   lockOutBuzzer: (teamId: string) => void;
   setAutoScoring: (on: boolean) => void;
+  setPaused: (on: boolean) => void;
   room: RoomLink | null;
   setRoom: (r: RoomLink | null) => void;
   buzzerWinner: string | null;
@@ -123,7 +129,11 @@ const FALLBACK_CONTEXT: QuizContextValue = {
   buzzerResetSeq: 0,
   autoScoring: true,
   lockReason: null,
+  isPaused: false,
+  pausedResumeTimer: false,
+  pausedResumeAudio: false,
   setAutoScoring: noop,
+  setPaused: noop,
   lockOutBuzzer: noop,
   setQuiz: noop,
   goToQuestion: noop,
@@ -204,6 +214,9 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     sfx: { kind: "correct", seq: 0 },
     buzzerResetSeq: 0,
     autoScoring: true,
+    isPaused: false,
+    pausedResumeTimer: false,
+    pausedResumeAudio: false,
     ...freshQuestionState({ playing: false, volume: 0.8, restartSeq: 0 }),
   });
   // Viewer-Rolle sofort aus der URL erkennen, damit der Beamer-Tab nie seinen
@@ -443,6 +456,21 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         };
       }),
     setAutoScoring: (autoScoring) => setState((s) => ({ ...s, autoScoring })),
+    setPaused: (on) =>
+      setState((s) => {
+        if (on === s.isPaused) return s;
+        if (on) {
+          // Pause: Timer und Ton einfrieren, alles andere bleibt unverändert.
+          const timer = s.timer.running
+            ? { ...s.timer, running: false, remainingMs: timerRemainingMs(s.timer), endsAt: null }
+            : s.timer;
+          return { ...s, isPaused: true, pausedResumeTimer: s.timer.running, pausedResumeAudio: s.audio.playing, timer, audio: { ...s.audio, playing: false } };
+        }
+        const timer = s.pausedResumeTimer && s.timer.enabled && s.timer.remainingMs > 0
+          ? { ...s.timer, running: true, endsAt: Date.now() + s.timer.remainingMs }
+          : s.timer;
+        return { ...s, isPaused: false, pausedResumeTimer: false, pausedResumeAudio: false, timer, audio: s.pausedResumeAudio ? { ...s.audio, playing: true } : s.audio };
+      }),
     playSfx: (kind) => setState((s) => ({ ...s, sfx: { kind, seq: s.sfx.seq + 1 } })),
     lockOutBuzzer: (teamId) =>
       setState((s) => {

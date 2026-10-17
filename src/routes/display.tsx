@@ -24,7 +24,7 @@ export const Route = createFileRoute("/display")({
 });
 
 function DisplayPage() {
-  const { quiz, theme, currentQuestionIndex, teams, sfx, nextQuestion, phase, status, showScores, room, setRoom, buzzerWinner } = useQuiz();
+  const { quiz, theme, currentQuestionIndex, teams, sfx, nextQuestion, phase, status, showScores, room, setRoom, buzzerWinner, isPaused } = useQuiz();
   const { room: roomParam } = Route.useSearch();
   const navigate = Route.useNavigate();
   const [codeInput, setCodeInput] = useState("");
@@ -47,7 +47,8 @@ function DisplayPage() {
     return undefined;
   }, [status]);
   const question = status === "running" ? quiz?.questions[currentQuestionIndex] : undefined;
-  const waiting = !!question && phase === "ready";
+  // Info-Folien haben keine Vorlese-Phase und erscheinen sofort.
+  const waiting = !!question && phase === "ready" && question.type !== "info";
   const bg = quiz?.branding?.backgroundImage;
   const compactResolution = phase === "resolved" && question && ["mosaic", "grid_coords", "clue_ladder"].includes(question.type);
 
@@ -63,7 +64,15 @@ function DisplayPage() {
       )}
 
       <div className={`flex min-h-0 flex-1 flex-col items-center justify-center text-center ${compactResolution ? "stage-resolved-content px-8 pb-4 pt-28" : "px-16"}`}>
-        {quiz && status === "intermission" ? (
+        {isPaused ? (
+          <div className="relative z-30 flex flex-col items-center animate-in fade-in duration-700">
+            {quiz?.pause?.image && (
+              <img src={quiz.pause.image} alt="" className="mb-8 max-h-[40vh] w-auto rounded-2xl object-contain shadow-glow" />
+            )}
+            <h1 className="text-6xl font-extrabold">{quiz?.pause?.title || "⏸ Kurze Pause"}</h1>
+            <p className="mt-6 text-2xl uppercase tracking-[0.3em] text-primary">{quiz?.pause?.subtitle || "Gleich geht es weiter…"}</p>
+          </div>
+        ) : quiz && status === "intermission" ? (
           <div className="relative z-30 flex flex-col items-center animate-in fade-in duration-1000">
             {quiz.outro?.intermission?.image && (
               <img src={quiz.outro.intermission.image} alt="" className="mb-8 max-h-[40vh] w-auto rounded-2xl object-contain shadow-glow" />
@@ -143,21 +152,24 @@ const GOLD_COLORS = ["oklch(0.85 0.17 90)", "oklch(0.75 0.15 75)", "oklch(0.95 0
 function Podium({ teams, title }: { teams: Team[]; title?: string | undefined }) {
   const ranked = [...teams].sort((a, b) => b.score - a.score).slice(0, 3);
   const order = [ranked[1], ranked[0], ranked[2]];
+  // Säulenhöhe proportional zum Punktestand: Gleichstand = exakt gleiche Höhe.
+  const maxScore = Math.max(1, ...ranked.map((t) => t?.score ?? 0));
+  const heightVh = (t: Team) => 12 + (Math.max(0, t.score) / maxScore) * 20;
   const cfg = [
-    { place: 2, h: "h-[22vh]", delay: "1200ms" },
-    { place: 1, h: "h-[32vh]", delay: "2400ms" },
-    { place: 3, h: "h-[14vh]", delay: "0ms" },
+    { delay: "1200ms" },
+    { delay: "2400ms" },
+    { delay: "0ms" },
   ];
   return (
     <div className="relative z-30 flex w-full flex-col items-center">
       <h1 className="mb-10 text-5xl font-extrabold">{title || "🏆 Siegerehrung"}</h1>
       <div className="flex items-end justify-center gap-6">
-        {order.map((t, i) => { const c = cfg[i]!; return t ? (
+        {order.map((t, i) => { const c = cfg[i]!; const first = t === ranked[0]; return t ? (
           <div key={t.id} className="flex w-64 flex-col items-center animate-in fade-in slide-in-from-bottom-16 fill-mode-both duration-1000" style={{ animationDelay: c.delay }}>
-            <p className={`font-extrabold ${c.place === 1 ? "text-5xl text-primary" : "text-3xl"}`}>{t.name}</p>
+            <p className={`font-extrabold ${first ? "text-5xl text-primary" : "text-3xl"}`}>{t.name}</p>
             <p className="mb-3 mt-1 font-mono text-2xl text-muted-foreground">{t.score} Punkte</p>
-            <div className={`flex w-full items-start justify-center rounded-t-2xl bg-card/85 pt-4 backdrop-blur ${c.h} ${c.place === 1 ? "shadow-glow border-2 border-primary" : ""}`}>
-              <span className="text-6xl font-extrabold text-primary">{c.place}</span>
+            <div className={`flex w-full items-start justify-center rounded-t-2xl bg-card/85 pt-4 backdrop-blur ${first ? "shadow-glow border-2 border-primary" : ""}`} style={{ height: `${heightVh(t)}vh` }}>
+              <span className="text-6xl font-extrabold text-primary">{first ? 1 : i === 0 ? 2 : 3}</span>
             </div>
           </div>
         ) : null; })}

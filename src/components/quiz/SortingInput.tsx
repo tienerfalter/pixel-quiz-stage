@@ -17,7 +17,22 @@ function Tile({ option, index, disabled }: { option: QuizOption; index: number; 
 }
 
 export function SortingInput({ options, saved, disabled, onSubmit }: { options: QuizOption[]; saved?: string[] | undefined; disabled: boolean; onSubmit: (order: string[]) => void }) {
-  const [order, setOrder] = useState<string[]>(() => saved ?? options.map((o) => o.id));
+  // Der Creator liefert die Optionen in Lösungsreihenfolge – auf dem Handy
+  // werden sie zufällig gemischt (nie exakt die Lösung als Startreihenfolge).
+  const [order, setOrder] = useState<string[]>(() => {
+    if (saved) return saved;
+    const ids = options.map((o) => o.id);
+    if (ids.length < 2) return ids;
+    let shuffled = ids;
+    do {
+      shuffled = [...ids];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!];
+      }
+    } while (shuffled.every((id, i) => id === ids[i]));
+    return shuffled;
+  });
   const shown = saved ?? order;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
