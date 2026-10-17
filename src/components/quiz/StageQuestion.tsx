@@ -111,10 +111,11 @@ export function StageQuestion({ question }: { question: QuizQuestion }) {
               </div>
             ))}
           </div>
-          {resolved && isRankBonus(question) && <RankList question={question} />}
         </div>
       );
     }
+    case "info":
+      return <DefaultMedia question={question} />;
     case "grid_coords":
       return <><QuestionAudio question={question} compact /><GridCoords question={question} /></>;
     default:
