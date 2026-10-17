@@ -52,4 +52,20 @@ describe("Quiz package presentation", () => {
     expect(pkg.branding?.theme).toBe("neon");
     expect(Object.keys(pkg.assetUrls)).toHaveLength(2);
   });
+
+  it("mixes sorting options deterministically and never shows the solution order", () => {
+    const correctOrder = options.map((o) => o.id);
+    const mixed = sortingMixedOrder(options, correctOrder, "q-42");
+    expect(mixed).not.toEqual(correctOrder);
+    expect([...mixed].sort()).toEqual(correctOrder.sort());
+    expect(sortingMixedOrder(options, correctOrder, "q-42")).toEqual(mixed);
+    expect(sortingMixedOrder(options, correctOrder, "q-43")).not.toEqual(correctOrder);
+  });
+
+  it("falls back to a rotation when the seeded shuffle equals the solution", () => {
+    const correctOrder = options.map((o) => o.id);
+    let mixed = correctOrder;
+    for (let i = 0; i < 500 && mixed === undefined; i++) mixed = sortingMixedOrder(options, correctOrder, `seed-${i}`);
+    expect(sortingMixedOrder(options, correctOrder, "any-seed")).not.toEqual(correctOrder);
+  });
 });
