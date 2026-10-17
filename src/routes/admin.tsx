@@ -293,9 +293,9 @@ function AdminControl() {
             <section className="rounded-2xl border bg-card p-6">
               <div className="mb-3 flex items-center gap-2">
                 <span className="rounded-md bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">{TYPE_LABEL[question.type] ?? question.type}</span>
-                <span className="text-sm font-bold text-accent">Mögliche Punkte dieser Runde: {pts} Punkte</span>
-                {question.penaltyPoints ? <span className="text-sm text-muted-foreground">· Abzug bei Fehler: {question.penaltyPoints}</span> : null}
-                <span className="text-xs text-muted-foreground">· {q.autoScoring ? "Auto-Scoring an" : "Manuelle Vergabe"}</span>
+                {!isInfo && <span className="text-sm font-bold text-accent">Mögliche Punkte dieser Runde: {pts} Punkte</span>}
+                {!isInfo && question.penaltyPoints ? <span className="text-sm text-muted-foreground">· Abzug bei Fehler: {question.penaltyPoints}</span> : null}
+                {!isInfo && <span className="text-xs text-muted-foreground">· {q.autoScoring ? "Auto-Scoring an" : "Manuelle Vergabe"}</span>}
               </div>
               <h3 className="text-lg font-semibold text-muted-foreground">{question.title}</h3>
               <p className="mt-1 text-2xl font-bold">{question.question}</p>
@@ -305,9 +305,16 @@ function AdminControl() {
                   {question.hostNotes.trivia && <p className="mt-1 text-muted-foreground"><span className="font-semibold">Trivia:</span> {question.hostNotes.trivia}</p>}
                 </div>
               )}
-              <QuestionErrorBoundary resetKey={question.id} onSkip={q.nextQuestion}><QuestionControls key={question.id} question={question} /></QuestionErrorBoundary>
+              {!isInfo && <QuestionErrorBoundary resetKey={question.id} onSkip={q.nextQuestion}><QuestionControls key={question.id} question={question} /></QuestionErrorBoundary>}
             </section>
 
+            {isInfo ? (
+              <section className="rounded-2xl border-2 border-primary/40 bg-card p-5">
+                <button onClick={q.currentQuestionIndex >= total - 1 ? q.endQuiz : q.nextQuestion} className="shadow-glow w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">
+                  {q.currentQuestionIndex >= total - 1 ? "Zur Auswertung / Zwischenbildschirm ▶" : "Weiter zur nächsten Frage ▶"}
+                </button>
+              </section>
+            ) : (
             <section className="space-y-4 rounded-2xl border-2 border-primary/40 bg-card p-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <AdminTimer />
