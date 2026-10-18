@@ -1,6 +1,6 @@
 import JSZip from "jszip";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { allActiveTeamsAnswered, correctChoiceLetter, pauseTitle, questionAudioSource, questionImageSource, resolveQuizTheme, sortingMixedOrder } from "@/lib/quizPresentation";
+import { allActiveTeamsAnswered, correctChoiceLetter, questionAudioSource, questionImageSource, resolveQuizTheme, sortingMixedOrder } from "@/lib/quizPresentation";
 import { needsInput } from "@/components/quiz/AnswerPad";
 import { computeAwards } from "@/lib/scoring";
 import { loadQuizPackage } from "@/utils/quizPackageLoader";
@@ -37,7 +37,8 @@ describe("Quiz package presentation", () => {
     expect(correctChoiceLetter(q)).toBe("B");
     expect(correctChoiceLetter({ ...q, correctOption: "b" })).toBe("B");
     expect(needsInput({ ...q, inputMode: "buzzer" })).toBe(false);
-    expect(needsInput({ ...q, inputMode: undefined })).toBe(false);
+    const { inputMode: _inputMode, ...legacyMosaic } = q;
+    expect(needsInput(legacyMosaic)).toBe(false);
     const answers = [{ team_id: "right", answer: { option: "B" }, created_at: "2026-10-18T00:00:01Z" }, { team_id: "wrong", answer: { option: "A" }, created_at: "2026-10-18T00:00:02Z" }];
     expect(computeAwards(q, answers, 1, 3)).toEqual({ right: 2 });
   });
@@ -61,7 +62,8 @@ describe("Quiz package presentation", () => {
   });
 
   it("keeps legacy audio when a resolution image exists", () => {
-    const q = { ...question, audio: undefined, mediaType: "audio" as const, media: "legacy.mp3", resolutionMedia: "solution.png" };
+    const { audio: _audio, ...legacy } = question;
+    const q = { ...legacy, mediaType: "audio" as const, media: "legacy.mp3", resolutionMedia: "solution.png" };
     expect(questionAudioSource(q)).toBe("legacy.mp3");
     expect(questionImageSource(q, "guessing")).toBeUndefined();
     expect(questionImageSource(q, "resolved")).toBe("solution.png");
