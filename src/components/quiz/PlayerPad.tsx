@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { QuizBranding, QuizPause, QuizQuestion, Team } from "@/types/quiz";
-import { resolveQuizTheme } from "@/lib/quizPresentation";
+import { pauseTitle, resolveQuizTheme } from "@/lib/quizPresentation";
 import { AnswerPad, needsInput } from "./AnswerPad";
 
 interface RoomRow {
@@ -126,7 +126,7 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
     body = (
       <div className="rounded-3xl border bg-card/80 p-10 backdrop-blur">
         {p?.image && <img src={p.image} alt="" className="mx-auto mb-6 max-h-48 rounded-xl object-contain" />}
-        <p className="text-3xl font-extrabold">{p?.title || "⏸ Kurze Pause"}</p>
+        <p className="text-3xl font-extrabold">{pauseTitle(p?.title)}</p>
         <p className="mt-3 text-muted-foreground">{p?.subtitle || "Gleich geht es weiter…"}</p>
       </div>
     );

@@ -7,6 +7,7 @@ import { playCorrectSound, playWrongSound, startDrumRoll, playFanfare } from "@/
 import { useQuiz } from "@/context/QuizContext";
 import type { Team } from "@/types/quiz";
 import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";
+import { pauseTitle } from "@/lib/quizPresentation";
 
 export const Route = createFileRoute("/display")({
   validateSearch: (s: Record<string, unknown>) => ({ room: typeof s["room"] === "string" ? s["room"].toUpperCase() : undefined }),
@@ -69,7 +70,7 @@ function DisplayPage() {
             {quiz?.pause?.image && (
               <img src={quiz.pause.image} alt="" className="mb-8 max-h-[40vh] w-auto rounded-2xl object-contain shadow-glow" />
             )}
-            <h1 className="text-6xl font-extrabold">{quiz?.pause?.title || "⏸ Kurze Pause"}</h1>
+            <h1 className="text-6xl font-extrabold">{pauseTitle(quiz?.pause?.title)}</h1>
             <p className="mt-6 text-2xl uppercase tracking-[0.3em] text-primary">{quiz?.pause?.subtitle || "Gleich geht es weiter…"}</p>
           </div>
         ) : quiz && status === "intermission" ? (

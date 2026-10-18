@@ -11,6 +11,7 @@ import { QuestionControls } from "@/components/quiz/QuestionControls";
 import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";
 import { AdminTimer } from "@/components/quiz/TimerDisplay";
 import { computeAwards, roundPoints, type ScoredAnswer } from "@/lib/scoring";
+import { allActiveTeamsAnswered } from "@/lib/quizPresentation";
 
 const PHASE_LABEL = { ready: "Vorlesen", guessing: "Raten", locked: "Gesperrt", resolved: "Aufgelöst" } as const;
 import { loadQuizPackage } from "@/utils/quizPackageLoader";
@@ -144,21 +145,25 @@ function AnswerCount({ code }: { code: string }) {
   const q = useQuiz();
   const idx = q.currentQuestionIndex;
   const question = q.quiz?.questions[idx];
-  const [count, setCount] = useState(0);
+  const [answers, setAnswers] = useState<{ team_id: string }[]>([]);
   const relevant = !!question && q.status === "running" && needsInput(question);
-  const autoLock = !!question && (["choice", "slider", "grid_coords", "sorting"].includes(question.type) || (question.type === "clue_ladder" && question.inputMode === "choice"));
+  const autoLock = relevant;
   const total = q.teams.length;
-  const allIn = total > 0 && count >= total;
+  const activeIds = q.teams.map((t) => t.id);
+  const count = new Set(answers.filter((a) => activeIds.includes(a.team_id)).map((a) => a.team_id)).size;
+  const allIn = allActiveTeamsAnswered(activeIds, answers);
   const { phase, setPhase } = q;
   useEffect(() => {
     if (relevant && autoLock && allIn && phase === "guessing") setPhase("locked");
   }, [relevant, autoLock, allIn, phase, setPhase]);
   useEffect(() => {
-    setCount(0);
+    setAnswers([]);
     if (!relevant) return;
-    const load = () => fetchAnswers(code, idx).then((rows) => setCount(rows.length));
+    let cancelled = false;
+    const load = () => fetchAnswers(code, idx).then((rows) => { if (!cancelled) setAnswers(rows); });
     load();
-    return subscribeRoom(code, (table) => { if (!table || table === "room_answers") load(); });
+    const unsubscribe = subscribeRoom(code, (table) => { if (!table || table === "room_answers") load(); });
+    return () => { cancelled = true; unsubscribe(); };
   }, [code, idx, relevant]);
   if (!relevant) return null;
   return (
@@ -205,7 +210,7 @@ function AdminControl() {
     q.setPhase("resolved");
     if (!q.autoScoring || !q.room || !question || !needsInput(question)) return;
     const data = await fetchAnswers(q.room.code, q.currentQuestionIndex);
-    const awards = computeAwards(question, data as ScoredAnswer[], q.revealedClues);
+    const awards = computeAwards(question, data as ScoredAnswer[], q.revealedClues, q.revealedTiles.length);
     bookOnce(`${qKey}-resolve`, () => Object.entries(awards).forEach(([id, p]) => q.adjustScore(id, p)));
   }
 

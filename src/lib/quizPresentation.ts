@@ -1,4 +1,37 @@
-import type { QuizOption, QuizQuestion, QuizTheme } from "@/types/quiz";
+import type { Phase, QuizOption, QuizQuestion, QuizTheme } from "@/types/quiz";
+
+export function questionImageSource(question: QuizQuestion, phase: Phase): string | undefined {
+  if (phase === "resolved" && question.resolutionMedia) return question.resolutionMedia;
+  return question.mediaType !== "audio" ? question.media : undefined;
+}
+
+export function choiceOptions(q: QuizQuestion): QuizOption[] | null {
+  if (q.type === "choice" || ((q.type === "clue_ladder" || q.type === "mosaic") && q.inputMode === "choice")) return q.options ?? [];
+  return null;
+}
+
+export function correctChoiceLetter(q: QuizQuestion): string | undefined {
+  const options = choiceOptions(q);
+  if (!options) return undefined;
+  if (q.type === "mosaic" && q.correctOption) {
+    const idIndex = options.findIndex((o) => o.id === q.correctOption);
+    if (idIndex >= 0) return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[idIndex];
+    const letter = q.correctOption.toUpperCase();
+    if (/^[A-D]$/.test(letter) && options[letter.charCodeAt(0) - 65]) return letter;
+    return undefined;
+  }
+  const index = options.findIndex((o) => o.isCorrect);
+  return index >= 0 ? "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[index] : undefined;
+}
+
+export function allActiveTeamsAnswered(teamIds: string[], answers: { team_id: string }[]): boolean {
+  const submitted = new Set(answers.map((a) => a.team_id));
+  return teamIds.length > 0 && teamIds.every((id) => submitted.has(id));
+}
+
+export function pauseTitle(title?: string): string {
+  return title?.replace(/^\s*⏸\uFE0F?\s*/, "").trim() || "Kurze Pause";
+}
 
 /** New dual-media packages and legacy audio-only packages share one source. */
 export function questionAudioSource(question?: QuizQuestion): string | undefined {
