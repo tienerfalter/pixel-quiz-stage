@@ -4,18 +4,15 @@ import { SortingInput } from "./SortingInput";
 import { supabase } from "@/integrations/supabase/client";
 import { deviationText, fmtValue } from "@/lib/units";
 import { choiceRanking, isRankBonus, roundPoints, type ChoiceRank, type ScoredAnswer } from "@/lib/scoring";
-import type { QuizOption, QuizQuestion } from "@/types/quiz";
+import type { QuizQuestion } from "@/types/quiz";
+import { choiceOptions, correctChoiceLetter } from "@/lib/quizPresentation";
+import { Button } from "@/components/ui/button";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 export type PadAnswer = { option?: string; value?: number; cell?: string; order?: string[]; submittedAt?: string };
 
-/** Options shown as tiles for a question, or null when it isn't a tile question. */
-export function choiceOptions(q: QuizQuestion): QuizOption[] | null {
-  if (q.type === "choice") return q.options ?? [];
-  if (q.type === "clue_ladder" && q.inputMode === "choice") return q.options ?? [];
-  return null;
-}
+export { choiceOptions } from "@/lib/quizPresentation";
 
 /** True when the phone shows an input form instead of the buzzer. */
 export function needsInput(q: QuizQuestion) {
@@ -28,12 +25,13 @@ function feedback(q: QuizQuestion, a: PadAnswer, auto: boolean, mine?: ChoiceRan
   const win = (head: string) => (auto && pts > 0 ? `${head} +${pts} Punkte` : "Richtig gelöst! Der Quizmaster vergibt die Punkte.");
   const opts = choiceOptions(q);
   if (opts) {
-    const idx = opts.findIndex((o) => o.isCorrect);
-    const ok = idx >= 0 && a.option === LETTERS[idx];
+    const correct = correctChoiceLetter(q);
+    const ok = !!correct && a.option === correct;
+    if (ok && auto && q.type === "mosaic") return { ok, text: "Richtig! Die Punkte werden gutgeschrieben." };
     if (ok && auto && q.type === "choice" && q.scoring && mine) {
       return { ok, text: isRankBonus(q) ? `Richtig! Platz ${mine.rank} – du erhältst ${mine.points} Punkte!` : `Richtig! +${mine.points} Punkte!` };
     }
-    return { ok, text: ok ? win("Richtig!") : idx >= 0 ? `Leider falsch – richtig war ${LETTERS[idx]}` : "Ausgewertet" };
+    return { ok, text: ok ? win("Richtig!") : correct ? `Leider falsch – richtig war ${correct}` : "Ausgewertet" };
   }
   if (q.type === "grid_coords") {
     const ok = (q.correctCells ?? []).map((c) => c.toUpperCase()).includes(a.cell ?? "");
@@ -93,15 +91,16 @@ export function AnswerPad({ question, qIndex, phase, code, teamId, autoScoring =
     input = (
       <div className="space-y-3">
         {opts.slice(0, 4).map((o, i) => {
-          const l = LETTERS[i]!;
+          const l = LETTERS[i];
+          if (!l) return null;
           const picked = shown.option === l;
           const dim = (saved || !active) && !picked;
           return (
-            <button key={o.id ?? l} disabled={!active || busy} onClick={() => submit({ option: l })}
-              className={`flex w-full touch-manipulation items-center gap-4 rounded-2xl border-2 p-5 text-left text-xl font-bold transition active:scale-[0.98] ${picked ? "border-primary bg-primary text-primary-foreground shadow-glow" : "bg-card"} ${dim ? "opacity-35" : ""}`}>
+            <Button variant="outline" key={o.id ?? l} disabled={!active || busy} onClick={() => submit({ option: l })}
+              className={`flex h-auto w-full touch-manipulation justify-start gap-4 whitespace-normal rounded-2xl border-2 p-5 text-left text-xl font-bold transition active:scale-[0.98] ${picked ? "border-primary bg-primary text-primary-foreground shadow-glow" : "bg-card"} ${dim ? "opacity-35" : ""}`}>
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary font-mono text-foreground">{l}</span>
               <span>{o.text}</span>
-            </button>
+            </Button>
           );
         })}
       </div>
