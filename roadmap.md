@@ -1,4 +1,7 @@
 # Aufgaben
+- [ ] Pausensymbol entfernen und Paket-Pausenbild erhalten.
+- [ ] Auflösungsbilder auf dem Beamer unterstützen und prüfen.
+- [ ] Mosaik-Auswahlantworten samt Auswertung und Auto-Complete unterstützen und prüfen.
 - [x] Gleichzeitiges Bild und Audio aus Quiz-Paketen unterstützen und prüfen.
 - [x] Importierte Farbschemata auf Beamer und Handys anwenden und prüfen.
 - [x] Mosaik-Lösung mit Trivia anzeigen.
