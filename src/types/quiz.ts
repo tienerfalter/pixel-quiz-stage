@@ -21,6 +21,7 @@ export interface BaseQuestion {
   points: number;
   penaltyPoints?: number;
   media?: string;
+  resolutionMedia?: string;
   audio?: string;
   mediaType?: "image" | "audio";
   hostNotes?: { solution?: string; trivia?: string };
@@ -63,6 +64,9 @@ export interface ClueLadderQuestion extends BaseQuestion {
 
 export interface MosaicQuestion extends BaseQuestion {
   type: "mosaic";
+  inputMode?: "choice" | "buzzer";
+  options?: QuizOption[];
+  correctOption?: string;
   media: string;
   grid: { rows: number; cols: number };
   revealMode: "auto" | "manual";

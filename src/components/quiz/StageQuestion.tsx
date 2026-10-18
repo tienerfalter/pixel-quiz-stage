@@ -1,7 +1,7 @@
 import { fetchAnswers } from "@/lib/roomData";
 import { useEffect, useRef, useState } from "react";
 import { choiceRanking, isRankBonus, type ChoiceRank, type ScoredAnswer } from "@/lib/scoring";
-import { questionAudioSource, sortingMixedOrder } from "@/lib/quizPresentation";
+import { questionAudioSource, questionImageSource, sortingMixedOrder } from "@/lib/quizPresentation";
 import { Lock, Volume2 } from "lucide-react";
 import { useQuiz } from "@/context/QuizContext";
 import type { QuizQuestion } from "@/types/quiz";
@@ -132,10 +132,12 @@ export function StageQuestion({ question }: { question: QuizQuestion }) {
 }
 
 function DefaultMedia({ question }: { question: QuizQuestion }) {
-  const hasImage = !!question.media && question.mediaType !== "audio";
+  const { phase } = useQuiz();
+  const image = questionImageSource(question, phase);
+  const hasImage = !!image;
   return (
     <>
-      {hasImage && <img src={question.media} alt="" className="mt-10 max-h-[40vh] w-auto max-w-full rounded-2xl object-contain" />}
+      {hasImage && <img src={image} alt="" className="mt-10 max-h-[40vh] w-auto max-w-full rounded-2xl object-contain" />}
       <QuestionAudio question={question} compact={hasImage} />
     </>
   );
@@ -238,7 +240,7 @@ function Mosaic({ question }: { question: Extract<QuizQuestion, { type: "mosaic"
   return (
     <div className={`relative w-full max-w-5xl ${phase === "resolved" ? "mt-4" : "mt-8"}`}>
       <div className="relative overflow-hidden rounded-2xl">
-        <img src={question.media} alt="" className={`block w-full object-contain ${phase === "resolved" ? "stage-resolved-media" : "max-h-[60vh]"}`} />
+        <img src={questionImageSource(question, phase)} alt="" className={`block w-full object-contain ${phase === "resolved" ? "stage-resolved-media" : "max-h-[60vh]"}`} />
         <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
           {Array.from({ length: total }).map((_, i) => {
             const open = revealedTiles.includes(i);
@@ -275,7 +277,7 @@ function GridCoords({ question }: { question: Extract<QuizQuestion, { type: "gri
         {Array.from({ length: rows }).map((_, r) => <span key={r} className="flex items-center">{r + 1}</span>)}
       </div>
       <div className="relative">
-        <img src={question.media} alt="" className={`block max-w-full rounded-xl object-contain ${resolved ? "stage-resolved-media" : "max-h-[60vh]"}`} />
+        <img src={questionImageSource(question, phase)} alt="" className={`block max-w-full rounded-xl object-contain ${resolved ? "stage-resolved-media" : "max-h-[60vh]"}`} />
         <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
           {Array.from({ length: rows * cols }).map((_, i) => {
             const cell = `${LETTERS[i % cols]}${Math.floor(i / cols) + 1}`;

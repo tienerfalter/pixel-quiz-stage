@@ -73,6 +73,7 @@ export async function loadQuizPackage(file: File): Promise<LoadedQuizPackage> {
     ...(pkg.branding ? { branding: replaceAssetPaths(pkg.branding, assetUrls) } : {}),
     ...(pkg.outro ? { outro: replaceAssetPaths(pkg.outro, assetUrls) } : {}),
     ...(pkg.intro ? { intro: replaceAssetPaths(pkg.intro, assetUrls) } : {}),
+    ...(pkg.pause ? { pause: replaceAssetPaths(pkg.pause, assetUrls) } : {}),
     questions: replaceAssetPaths(pkg.questions, assetUrls),
     assetUrls,
     sourceFileName: file.name,
