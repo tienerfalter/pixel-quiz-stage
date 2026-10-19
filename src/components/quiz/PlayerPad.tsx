@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { QuizBranding, QuizPause, QuizQuestion, Team } from "@/types/quiz";
 import { pauseTitle, resolveQuizTheme } from "@/lib/quizPresentation";
 import { AnswerPad, needsInput } from "./AnswerPad";
+import { rankTeams } from "@/lib/teamRanking";
 
 interface RoomRow {
   phase: string;
@@ -110,6 +111,8 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
   const question = row?.quiz?.questions?.[row.current_question_index];
   const winner = row?.buzzer_winner;
   const winnerName = row?.state?.teams?.find((t) => t.id === winner)?.name ?? "Ein anderes Team";
+  const ownStanding = rankTeams(row?.state?.teams ?? []).find((t) => t.id === teamId);
+  const isFinale = phase === "intermission" || phase === "podium" || phase === "farewell";
 
   async function buzz() {
     if (pressing || winner || row?.state?.buzzerLocked?.includes(teamId)) return;
@@ -130,7 +133,7 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
         <p className="mt-3 text-muted-foreground">{p?.subtitle || "Gleich geht es weiter…"}</p>
       </div>
     );
-  } else if (question?.type === "info") {
+  } else if (question?.type === "info" && !isFinale) {
     body = (
       <div className="rounded-3xl border bg-card/80 p-8 text-left backdrop-blur">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">{question.title}</p>
@@ -165,7 +168,9 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
     body = <Info title="Frage läuft" text="Schau auf den Beamer und beratet euch im Team." />;
   } else if (phase === "locked" || phase === "resolved") {
     body = <Info title={row?.state?.lockReason === "timeout" && phase === "locked" ? "Die Zeit ist abgelaufen!" : "Runde beendet!"} text="Schau auf den Beamer." />;
-  } else if (phase === "intermission" || phase === "podium" || phase === "farewell") {
+  } else if (phase === "podium" && ownStanding) {
+    body = <Info title={`${ownStanding.rank}. Platz`} text="Eure Platzierung bei der Siegerehrung" />;
+  } else if (isFinale) {
     body = <Info title="Das Quiz ist vorbei" text="Schau auf den Beamer für die Siegerehrung!" />;
   } else {
     body = <Info title="Gleich geht's los!" text={`Verbunden mit Raum ${code} – warte auf Start…`} />;
@@ -177,7 +182,10 @@ function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | nul
         <p className="text-sm text-muted-foreground">Du spielst als</p>
         <p className="text-3xl font-bold text-primary">{teamName || "…"}</p>
         {row?.state?.showScoreOnMobile && (
-          <p className="mt-1 font-mono text-lg font-bold text-muted-foreground">Punkte: {row.state.teams?.find((t) => t.id === teamId)?.score ?? 0}</p>
+          <div className="mt-1 font-mono text-lg font-bold text-muted-foreground">
+            <p>Punkte: {ownStanding?.score ?? 0}</p>
+            {ownStanding && <p>{ownStanding.rank}. Platz</p>}
+          </div>
         )}
       </div>
       {body}
