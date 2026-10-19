@@ -1,5 +1,5 @@
 # Aufgaben
-- [ ] Einheitliche Teamränge bei Gleichständen in Zwischenständen und Siegerehrung anzeigen und prüfen.
+- [x] Einheitliche Teamränge bei Gleichständen in Zwischenständen und Siegerehrung anzeigen und mit vier verbundenen Testteams prüfen.
 - [x] Pausensymbol entfernen und Paket-Pausenbild erhalten.
 - [x] Auflösungsbilder auf dem Beamer unterstützen und prüfen.
 - [x] Mosaik-Auswahlantworten samt Auswertung und Auto-Complete unterstützen und prüfen.
