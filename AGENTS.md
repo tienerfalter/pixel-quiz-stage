@@ -15,3 +15,4 @@
 - Resolve question audio through the shared presentation helper, preserving legacy mediaType audio; only the stage plays question sound so phones never echo it.
 - Keep question image selection and choice-option correctness in shared presentation helpers so stage rendering, player inputs, auto-complete and scoring agree across question types.
 - Derive the quiz theme from package branding in shared state; scope semantic CSS tokens to stage/player roots so live room updates apply themes without changing admin styling.
+- Compute overall team standings exclusively with the shared teamRanking helpers on stage and phones; include every tied podium team so array positions never determine places. Answer-speed scoring ranks remain separate.

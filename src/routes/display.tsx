@@ -8,6 +8,7 @@ import { useQuiz } from "@/context/QuizContext";
 import type { Team } from "@/types/quiz";
 import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";
 import { pauseTitle } from "@/lib/quizPresentation";
+import { podiumTeams, rankTeams } from "@/lib/teamRanking";
 
 export const Route = createFileRoute("/display")({
   validateSearch: (s: Record<string, unknown>) => ({ room: typeof s["room"] === "string" ? s["room"].toUpperCase() : undefined }),
@@ -134,9 +135,10 @@ function DisplayPage() {
       )}
       {status === "podium" && <Confetti gold />}
       {quiz && showScores && (status === "intro" || status === "running") && (
-        <footer className="relative z-10 flex justify-center gap-6 pb-8">
-          {teams.map((t) => (
+        <footer className="relative z-10 flex flex-wrap justify-center gap-6 pb-8">
+          {rankTeams(teams).map((t) => (
             <div key={t.id} className="rounded-xl bg-card/80 px-6 py-3 text-center backdrop-blur">
+              <p className="text-sm font-semibold text-accent">{t.rank}. Platz</p>
               <p className="text-sm text-muted-foreground">{t.name}</p>
               <p className="font-mono text-3xl font-bold text-primary">{t.score}</p>
             </div>
@@ -151,29 +153,26 @@ const CONFETTI_COLORS = ["var(--primary)", "var(--success)", "var(--destructive)
 const GOLD_COLORS = ["oklch(0.85 0.17 90)", "oklch(0.75 0.15 75)", "oklch(0.95 0.08 95)"];
 
 function Podium({ teams, title }: { teams: Team[]; title?: string | undefined }) {
-  const ranked = [...teams].sort((a, b) => b.score - a.score).slice(0, 3);
-  const order = [ranked[1], ranked[0], ranked[2]];
+  const ranked = podiumTeams(teams);
+  const displayOrder = (rank: number) => rank === 2 ? 0 : rank === 1 ? 1 : 2;
+  const order = [...ranked].sort((a, b) => displayOrder(a.rank) - displayOrder(b.rank));
   // Säulenhöhe proportional zum Punktestand: Gleichstand = exakt gleiche Höhe.
   const maxScore = Math.max(1, ...ranked.map((t) => t?.score ?? 0));
   const heightVh = (t: Team) => 12 + (Math.max(0, t.score) / maxScore) * 20;
-  const cfg = [
-    { delay: "1200ms" },
-    { delay: "2400ms" },
-    { delay: "0ms" },
-  ];
+  const delayForRank = (rank: number) => rank === 1 ? "2400ms" : rank === 2 ? "1200ms" : "0ms";
   return (
-    <div className="relative z-30 flex w-full flex-col items-center">
+    <div className="relative z-30 flex max-h-full w-full flex-col items-center overflow-y-auto">
       <h1 className="mb-10 text-5xl font-extrabold">{title || "🏆 Siegerehrung"}</h1>
-      <div className="flex items-end justify-center gap-6">
-        {order.map((t, i) => { const c = cfg[i]!; const first = t === ranked[0]; return t ? (
-          <div key={t.id} className="flex w-64 flex-col items-center animate-in fade-in slide-in-from-bottom-16 fill-mode-both duration-1000" style={{ animationDelay: c.delay }}>
-            <p className={`font-extrabold ${first ? "text-5xl text-primary" : "text-3xl"}`}>{t.name}</p>
+      <div className="flex w-full flex-wrap items-end justify-center gap-6">
+        {order.map((t) => { const first = t.rank === 1; return (
+          <div key={t.id} className="flex w-56 max-w-full flex-col items-center animate-in fade-in slide-in-from-bottom-16 fill-mode-both duration-1000" style={{ animationDelay: delayForRank(t.rank) }}>
+            <p className={`w-full break-words font-extrabold ${first ? "text-4xl text-primary" : "text-3xl"}`}>{t.name}</p>
             <p className="mb-3 mt-1 font-mono text-2xl text-muted-foreground">{t.score} Punkte</p>
             <div className={`flex w-full items-start justify-center rounded-t-2xl bg-card/85 pt-4 backdrop-blur ${first ? "shadow-glow border-2 border-primary" : ""}`} style={{ height: `${heightVh(t)}vh` }}>
-              <span className="text-6xl font-extrabold text-primary">{first ? 1 : i === 0 ? 2 : 3}</span>
+              <span className="text-3xl font-extrabold text-primary">{t.rank}. Platz</span>
             </div>
           </div>
-        ) : null; })}
+        ); })}
       </div>
     </div>
   );
