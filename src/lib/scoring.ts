@@ -38,7 +38,7 @@ export function choiceRanking(q: QuizQuestion, answers: ScoredAnswer[], revealed
   return correct.map((a, i) => {
     let points: number;
     if (sc?.mode === "rank_bonus") points = sc.pointsByRank?.[i] ?? sc.fallbackPoints ?? 1;
-    else if (sc && "points" in sc && sc.mode !== "rank_bonus") points = sc.points;
+    else if (sc && "points" in sc) points = sc.points;
     else if (q.type === "choice" && q.scoringMode === "speed_bonus") points = (q.points ?? 0) + correct.length - i - 1;
     else points = roundPoints(q, revealedTiles, revealedClues);
     return { team_id: a.team_id, rank: i + 1, points: Math.round(points) };
