@@ -350,11 +350,6 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const resolveWithSolution = useCallback((partySolution: PartySolution) => {
-    setState((s) => ({ ...s, partySolution }));
-    setPhase("resolved");
-  }, [setPhase]);
-
   const revealRandomTile = useCallback((total: number) => {
     setState((s) => {
       const hidden = Array.from({ length: total }, (_, i) => i).filter((i) => !s.revealedTiles.includes(i));
@@ -469,6 +464,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         };
       }),
     setAutoScoring: (autoScoring) => setState((s) => ({ ...s, autoScoring })),
+    resolveWithSolution: (partySolution) => { setState((s) => ({ ...s, partySolution })); setPhase("resolved"); },
     setPaused: (on) =>
       setState((s) => {
         if (on === s.isPaused) return s;
