@@ -7,6 +7,7 @@ import { playCorrectSound, playWrongSound, startDrumRoll, playFanfare } from "@/
 import { useQuiz } from "@/context/QuizContext";
 import type { Team } from "@/types/quiz";
 import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";
+import { applyPartySolution } from "@/lib/partyModes";
 import { pauseTitle } from "@/lib/quizPresentation";
 import { podiumTeams, rankTeams } from "@/lib/teamRanking";
 
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/display")({
 });
 
 function DisplayPage() {
-  const { quiz, theme, currentQuestionIndex, teams, sfx, nextQuestion, phase, status, showScores, room, setRoom, buzzerWinner, isPaused } = useQuiz();
+  const { quiz, theme, currentQuestionIndex, teams, sfx, nextQuestion, phase, status, showScores, room, setRoom, buzzerWinner, isPaused, partySolution } = useQuiz();
   const { room: roomParam } = Route.useSearch();
   const navigate = Route.useNavigate();
   const [codeInput, setCodeInput] = useState("");
@@ -48,7 +49,8 @@ function DisplayPage() {
     if (status === "podium") playFanfare();
     return undefined;
   }, [status]);
-  const question = status === "running" ? quiz?.questions[currentQuestionIndex] : undefined;
+  const rawQuestion = status === "running" ? quiz?.questions[currentQuestionIndex] : undefined;
+  const question = rawQuestion && applyPartySolution(rawQuestion, partySolution, currentQuestionIndex);
   // Info-Folien haben keine Vorlese-Phase und erscheinen sofort.
   const waiting = !!question && phase === "ready" && question.type !== "info";
   const bg = quiz?.branding?.backgroundImage;

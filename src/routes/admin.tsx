@@ -10,6 +10,8 @@ import { needsInput } from "@/components/quiz/AnswerPad";
 import { QuestionControls } from "@/components/quiz/QuestionControls";
 import { QuestionErrorBoundary } from "@/components/quiz/QuestionErrorBoundary";
 import { AdminTimer } from "@/components/quiz/TimerDisplay";
+import { applyPartySolution, isHostDecides, partyMode, partySolutionFromAnswers, type PartySolution } from "@/lib/partyModes";
+import type { QuizQuestion } from "@/types/quiz";
 import { computeAwards, roundPoints, type ScoredAnswer } from "@/lib/scoring";
 import { allActiveTeamsAnswered } from "@/lib/quizPresentation";
 
@@ -206,11 +208,20 @@ function AdminControl() {
   const bookOnce = (key: string, fn: () => void) => { if (booked.current.has(key)) return; booked.current.add(key); fn(); };
   const qKey = `${q.quiz?.sourceFileName}-${q.currentQuestionIndex}`;
 
-  async function resolve() {
-    q.setPhase("resolved");
-    if (!q.autoScoring || !q.room || !question || !needsInput(question)) return;
-    const data = await fetchAnswers(q.room.code, q.currentQuestionIndex);
-    const awards = computeAwards(question, data as ScoredAnswer[], q.revealedClues, q.revealedTiles.length);
+  async function resolve(hostSolution?: Omit<PartySolution, "qIndex">) {
+    const idx = q.currentQuestionIndex;
+    const mode = partyMode(question);
+    let scored = question;
+    let data: ScoredAnswer[] | null = null;
+    if (question && mode) {
+      data = q.room ? (await fetchAnswers(q.room.code, idx)) as ScoredAnswer[] : [];
+      const sol = hostSolution ? { qIndex: idx, ...hostSolution } : partySolutionFromAnswers(question, idx, data) ?? { qIndex: idx };
+      scored = applyPartySolution(question, sol, idx);
+      q.resolveWithSolution(sol);
+    } else q.setPhase("resolved");
+    if (!q.autoScoring || !q.room || !scored || !needsInput(scored)) return;
+    data ??= (await fetchAnswers(q.room.code, idx)) as ScoredAnswer[];
+    const awards = computeAwards(scored, data, q.revealedClues, q.revealedTiles.length);
     bookOnce(`${qKey}-resolve`, () => Object.entries(awards).forEach(([id, p]) => q.adjustScore(id, p)));
   }
 
@@ -349,8 +360,11 @@ function AdminControl() {
               {q.phase === "guessing" && (
                 <button onClick={() => q.setPhase("locked")} className="w-full rounded-xl bg-secondary py-4 text-lg font-bold hover:bg-muted">⏸ Eingaben sperren</button>
               )}
-              {q.phase === "locked" && (
-                <button onClick={resolve} className="shadow-glow w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">Lösung auf Beamer enthüllen ▶</button>
+              {q.phase === "locked" && isHostDecides(question) && (
+                <HostDecidePanel question={question!} onDecide={(sol) => void resolve(sol)} />
+              )}
+              {q.phase === "locked" && !isHostDecides(question) && (
+                <button onClick={() => void resolve()} className="shadow-glow w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">Lösung auf Beamer enthüllen ▶</button>
               )}
               {q.phase === "resolved" && (
                 <button onClick={q.currentQuestionIndex >= total - 1 ? q.endQuiz : q.nextQuestion} className="w-full rounded-xl bg-primary py-5 text-xl font-extrabold text-primary-foreground">
@@ -399,4 +413,36 @@ function AdminControl() {
       </div>
     </main>
   );
+}
+
+function HostDecidePanel({ question, onDecide }: { question: QuizQuestion; onDecide: (sol: Omit<PartySolution, "qIndex">) => void }) {
+  const [value, setValue] = useState("");
+  if (question.type === "choice") {
+    return (
+      <div className="rounded-xl border-2 border-primary bg-card p-4">
+        <p className="mb-3 font-bold">🎉 Host entscheidet: Welche Antwort ist richtig?</p>
+        <div className="grid grid-cols-2 gap-3">
+          {question.options.slice(0, 4).map((o, i) => (
+            <button key={o.id ?? i} onClick={() => onDecide({ options: ["ABCD"[i]!] })} className="rounded-xl bg-primary px-4 py-4 text-left text-lg font-extrabold text-primary-foreground">
+              {"ABCD"[i]}: {o.text}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (question.type === "slider") {
+    const n = Number(value.replace(",", "."));
+    const ok = value.trim() !== "" && Number.isFinite(n);
+    return (
+      <form onSubmit={(e) => { e.preventDefault(); if (ok) onDecide({ value: n }); }} className="rounded-xl border-2 border-primary bg-card p-4">
+        <p className="mb-3 font-bold">🎉 Host entscheidet: Richtige Zahl eingeben{question.sliderConfig?.unit ? ` (${question.sliderConfig.unit})` : ""}</p>
+        <div className="flex gap-3">
+          <input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} className="flex-1 rounded-xl border bg-input px-4 py-3 text-2xl font-bold outline-none focus:border-primary" placeholder="z. B. 42" />
+          <button disabled={!ok} className="rounded-xl bg-primary px-6 text-lg font-extrabold text-primary-foreground disabled:opacity-40">Auflösen ▶</button>
+        </div>
+      </form>
+    );
+  }
+  return null;
 }

@@ -1,5 +1,5 @@
 import type { QuizQuestion } from "@/types/quiz";
-import { choiceOptions, correctChoiceLetter } from "@/lib/quizPresentation";
+import { choiceOptions, correctChoiceLetters } from "@/lib/quizPresentation";
 
 export type ScoredAnswer = { team_id: string; answer: { option?: string; value?: number; cell?: string; order?: string[]; submittedAt?: string }; created_at: string };
 
@@ -30,15 +30,15 @@ export function choiceRanking(q: QuizQuestion, answers: ScoredAnswer[], revealed
     const cells = (q.correctCells ?? []).map((c) => c.toUpperCase());
     correct = sorted.filter((a) => cells.includes((a.answer.cell ?? "").toUpperCase()));
   } else {
-    const letter = correctChoiceLetter(q);
-    if (!letter) return [];
-    correct = sorted.filter((a) => a.answer.option === letter);
+    const letters = correctChoiceLetters(q);
+    if (!letters.length) return [];
+    correct = sorted.filter((a) => !!a.answer.option && letters.includes(a.answer.option));
   }
   const sc = q.type === "choice" || q.type === "grid_coords" || q.type === "sorting" ? q.scoring : undefined;
   return correct.map((a, i) => {
     let points: number;
     if (sc?.mode === "rank_bonus") points = sc.pointsByRank?.[i] ?? sc.fallbackPoints ?? 1;
-    else if (sc?.mode === "fixed") points = sc.points;
+    else if (sc && "points" in sc) points = sc.points;
     else if (q.type === "choice" && q.scoringMode === "speed_bonus") points = (q.points ?? 0) + correct.length - i - 1;
     else points = roundPoints(q, revealedTiles, revealedClues);
     return { team_id: a.team_id, rank: i + 1, points: Math.round(points) };

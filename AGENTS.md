@@ -16,3 +16,4 @@
 - Keep question image selection and choice-option correctness in shared presentation helpers so stage rendering, player inputs, auto-complete and scoring agree across question types.
 - Derive the quiz theme from package branding in shared state; scope semantic CSS tokens to stage/player roots so live room updates apply themes without changing admin styling.
 - Compute overall team standings exclusively with the shared teamRanking helpers on stage and phones; include every tied podium team so array positions never determine places. Answer-speed scoring ranks remain separate.
+- Party-mode solutions are computed by the host at resolve time and synced as state.partySolution; stage, phones and scoring use applyPartySolution so all read the same patched question.

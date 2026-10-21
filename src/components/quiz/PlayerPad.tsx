@@ -5,13 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import type { QuizBranding, QuizPause, QuizQuestion, Team } from "@/types/quiz";
 import { pauseTitle, resolveQuizTheme } from "@/lib/quizPresentation";
 import { AnswerPad, needsInput } from "./AnswerPad";
+import { applyPartySolution, type PartySolution } from "@/lib/partyModes";
 import { rankTeams } from "@/lib/teamRanking";
 
 interface RoomRow {
   phase: string;
   current_question_index: number;
   buzzer_winner: string | null;
-  state: { teams?: Team[]; buzzerLocked?: string[]; autoScoring?: boolean; lockReason?: string | null; showScoreOnMobile?: boolean; isPaused?: boolean } | null;
+  state: { teams?: Team[]; buzzerLocked?: string[]; autoScoring?: boolean; lockReason?: string | null; showScoreOnMobile?: boolean; isPaused?: boolean; partySolution?: PartySolution | null } | null;
   quiz: { meta?: { title?: string }; questions?: QuizQuestion[]; branding?: QuizBranding; pause?: QuizPause } | null;
 }
 
@@ -108,7 +109,8 @@ export function PlayerPad({ initialRoom }: { initialRoom?: string | undefined })
 function PadState({ row, code, teamId, teamName, onLeave }: { row: RoomRow | null; code: string; teamId: string; teamName: string; onLeave: () => void }) {
   const [pressing, setPressing] = useState(false);
   const phase = row?.phase ?? "intro";
-  const question = row?.quiz?.questions?.[row.current_question_index];
+  const rawQuestion = row?.quiz?.questions?.[row.current_question_index];
+  const question = rawQuestion && applyPartySolution(rawQuestion, row?.state?.partySolution, row!.current_question_index);
   const winner = row?.buzzer_winner;
   const winnerName = row?.state?.teams?.find((t) => t.id === winner)?.name ?? "Ein anderes Team";
   const ownStanding = rankTeams(row?.state?.teams ?? []).find((t) => t.id === teamId);

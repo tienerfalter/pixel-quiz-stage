@@ -1,4 +1,5 @@
 # Aufgaben
+- [x] Party-Modi (Mehrheit, Minderheit, Durchschnitt, Host entscheidet) für Auswahl, Bildraster und Schätzfrage.
 - [x] Einheitliche Teamränge bei Gleichständen in Zwischenständen und Siegerehrung anzeigen und mit vier verbundenen Testteams prüfen.
 - [x] Pausensymbol entfernen und Paket-Pausenbild erhalten.
 - [x] Auflösungsbilder auf dem Beamer unterstützen und prüfen.

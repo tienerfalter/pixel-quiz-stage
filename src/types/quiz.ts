@@ -39,7 +39,8 @@ export interface ChoiceQuestion extends BaseQuestion {
   scoringMode?: "fixed_points" | "speed_bonus";
   scoring?:
     | { mode: "fixed"; points: number }
-    | { mode: "rank_bonus"; pointsByRank: number[]; fallbackPoints?: number };
+    | { mode: "rank_bonus"; pointsByRank: number[]; fallbackPoints?: number }
+    | { mode: "majority_wins" | "minority_wins" | "host_decides"; points: number };
 }
 
 export interface SliderQuestion extends BaseQuestion {
@@ -47,7 +48,7 @@ export interface SliderQuestion extends BaseQuestion {
   sliderConfig: { min: number; max: number; step?: number; unit?: string; unitPlural?: string };
   correctValue: number;
   scoring?: {
-    mode: "closest_wins" | "tolerance_tiers";
+    mode: "closest_wins" | "tolerance_tiers" | "average_closest_wins" | "host_decides";
     points?: number;
     tiers?: { tolerance: number; points: number }[];
   };
@@ -81,7 +82,7 @@ export interface GridCoordsQuestion extends BaseQuestion {
   grid: { rows: number; cols: number };
   correctCells: string[];
   points: number;
-  scoring?: { mode: "fixed"; points: number } | { mode: "rank_bonus"; pointsByRank: number[]; fallbackPoints?: number };
+  scoring?: { mode: "fixed"; points: number } | { mode: "rank_bonus"; pointsByRank: number[]; fallbackPoints?: number } | { mode: "majority_wins" | "minority_wins"; points: number };
 }
 
 export interface SortingQuestion extends BaseQuestion {
