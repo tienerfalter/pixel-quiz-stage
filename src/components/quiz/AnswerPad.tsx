@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { deviationText, fmtValue } from "@/lib/units";
 import { choiceRanking, isRankBonus, roundPoints, type ChoiceRank, type ScoredAnswer } from "@/lib/scoring";
 import type { QuizQuestion } from "@/types/quiz";
-import { choiceOptions, correctChoiceLetter } from "@/lib/quizPresentation";
+import { choiceOptions, correctChoiceLetters } from "@/lib/quizPresentation";
 import { Button } from "@/components/ui/button";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -25,8 +25,9 @@ function feedback(q: QuizQuestion, a: PadAnswer, auto: boolean, mine?: ChoiceRan
   const win = (head: string) => (auto && pts > 0 ? `${head} +${pts} Punkte` : "Richtig gelöst! Der Quizmaster vergibt die Punkte.");
   const opts = choiceOptions(q);
   if (opts) {
-    const correct = correctChoiceLetter(q);
-    const ok = !!correct && a.option === correct;
+    const letters = correctChoiceLetters(q);
+    const correct = letters.join(" / ");
+    const ok = !!a.option && letters.includes(a.option);
     if (ok && auto && q.type === "mosaic") return { ok, text: "Richtig! Die Punkte werden gutgeschrieben." };
     if (ok && auto && q.type === "choice" && q.scoring && mine) {
       return { ok, text: isRankBonus(q) ? `Richtig! Platz ${mine.rank} – du erhältst ${mine.points} Punkte!` : `Richtig! +${mine.points} Punkte!` };
@@ -34,6 +35,7 @@ function feedback(q: QuizQuestion, a: PadAnswer, auto: boolean, mine?: ChoiceRan
     return { ok, text: ok ? win("Richtig!") : correct ? `Leider falsch – richtig war ${correct}` : "Ausgewertet" };
   }
   if (q.type === "grid_coords") {
+    if (!(q.correctCells ?? []).length) return { ok: null, text: "Ausgewertet" };
     const ok = (q.correctCells ?? []).map((c) => c.toUpperCase()).includes(a.cell ?? "");
     if (ok && auto && q.scoring && mine) return { ok, text: isRankBonus(q) ? `Volltreffer! Platz ${mine.rank} – du erhältst ${mine.points} Punkte!` : `Volltreffer! +${mine.points} Punkte!` };
     return { ok, text: ok ? win("Volltreffer!") : `Daneben – Ziel: ${(q.correctCells ?? []).join(", ")}` };

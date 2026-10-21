@@ -24,6 +24,14 @@ export function correctChoiceLetter(q: QuizQuestion): string | undefined {
   return index >= 0 ? "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[index] : undefined;
 }
 
+/** All correct letters (party modes may have several winning options). */
+export function correctChoiceLetters(q: QuizQuestion): string[] {
+  const options = choiceOptions(q);
+  if (!options) return [];
+  if (q.type === "mosaic") { const l = correctChoiceLetter(q); return l ? [l] : []; }
+  return options.flatMap((o, i) => (o.isCorrect ? ["ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i]!] : []));
+}
+
 export function allActiveTeamsAnswered(teamIds: string[], answers: { team_id: string }[]): boolean {
   const submitted = new Set(answers.map((a) => a.team_id));
   return teamIds.length > 0 && teamIds.every((id) => submitted.has(id));

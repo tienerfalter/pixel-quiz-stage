@@ -4,6 +4,7 @@ import { questionAudioSource, resolveQuizTheme } from "@/lib/quizPresentation";
 import { revokeQuizPackage } from "@/utils/quizPackageLoader";
 import { fetchRoom, fetchTeams, subscribeRoom } from "@/lib/roomData";
 import { pushRoom } from "@/lib/room.functions";
+import type { PartySolution } from "@/lib/partyModes";
 
 export interface RoomLink {
   code: string;
@@ -60,6 +61,8 @@ interface SyncState {
   /** Timer/audio were running when the pause started (resume on unpause) */
   pausedResumeTimer: boolean;
   pausedResumeAudio: boolean;
+  /** Live-determined solution for party modes (majority/minority/average/host decides) */
+  partySolution: PartySolution | null;
 }
 
 export type LockReason = "timeout" | "ended" | null;
@@ -97,6 +100,8 @@ interface QuizContextValue extends SyncState {
   lockOutBuzzer: (teamId: string) => void;
   setAutoScoring: (on: boolean) => void;
   setPaused: (on: boolean) => void;
+  /** Store the live party solution and resolve the round */
+  resolveWithSolution: (sol: PartySolution) => void;
   room: RoomLink | null;
   setRoom: (r: RoomLink | null) => void;
   buzzerWinner: string | null;
@@ -132,6 +137,8 @@ const FALLBACK_CONTEXT: QuizContextValue = {
   isPaused: false,
   pausedResumeTimer: false,
   pausedResumeAudio: false,
+  partySolution: null,
+  resolveWithSolution: noop,
   setAutoScoring: noop,
   setPaused: noop,
   lockOutBuzzer: noop,
@@ -192,6 +199,7 @@ const freshQuestionState = (audio: AudioState, question?: QuizQuestion) => ({
   audio: { ...audio, playing: false },
   timer: initialTimer(question),
   buzzerLocked: [] as string[],
+  partySolution: null as PartySolution | null,
 });
 
 export function timerRemainingMs(t: TimerState, now = Date.now()) {
@@ -341,6 +349,11 @@ export function QuizProvider({ children }: { children: ReactNode }) {
       return { ...s, status: "running", currentQuestionIndex: idx, ...freshQuestionState(s.audio, s.quiz?.questions[idx]) };
     });
   }, []);
+
+  const resolveWithSolution = useCallback((partySolution: PartySolution) => {
+    setState((s) => ({ ...s, partySolution }));
+    setPhase("resolved");
+  }, [setPhase]);
 
   const revealRandomTile = useCallback((total: number) => {
     setState((s) => {
